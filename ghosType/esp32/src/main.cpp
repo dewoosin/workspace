@@ -42,11 +42,11 @@ KeyboardMode currentKeyboardMode = MODE_UNKNOWN;  // Current active keyboard mod
 unsigned long lastModeChange = 0;                 // Timestamp of last mode switch
 
 // Protocol definitions for parsing incoming BLE data
-#define PROTOCOL_PREFIX "GHTYPE_"
-#define PROTOCOL_ENGLISH "GHTYPE_ENG:"     // English text input
-#define PROTOCOL_KOREAN "GHTYPE_KOR:"      // Korean jamo key sequence
-#define PROTOCOL_SPECIAL "GHTYPE_SPE:"     // Special commands (enter, ctrl+c, etc.)
-#define PROTOCOL_CONFIG "GHTYPE_CFG:"      // Configuration changes (typing speed)
+const char* const PROTOCOL_PREFIX = "GHTYPE_";
+const char* const PROTOCOL_ENGLISH = "GHTYPE_ENG:";
+const char* const PROTOCOL_KOREAN = "GHTYPE_KOR:";
+const char* const PROTOCOL_SPECIAL = "GHTYPE_SPE:";
+const char* const PROTOCOL_CONFIG = "GHTYPE_CFG:";
 
 // Function declarations
 void initializeSystem();
