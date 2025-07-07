@@ -783,7 +783,19 @@
 
         // 자모를 QWERTY 키로 변환
         function jamoToQwerty(jamo) {
-            return JAMO_TO_QWERTY[jamo] || jamo;
+            // Check if the character exists in the mapping
+            if (JAMO_TO_QWERTY.hasOwnProperty(jamo)) {
+                return JAMO_TO_QWERTY[jamo];
+            }
+            
+            // For unmapped characters, only return if it's a safe printable character
+            const code = jamo.charCodeAt(0);
+            if ((code >= 32 && code <= 126) || (code >= 0xAC00 && code <= 0xD7A3)) {
+                return jamo;
+            }
+            
+            // Filter out problematic characters that might cause issues
+            return '';
         }
 
         // 한글 텍스트를 자모 키 조합으로 변환
@@ -1217,11 +1229,67 @@
                 startCountdown();
             }
         });
+        
+        // Add paste event listener for main input field
+        document.getElementById('messageInput').addEventListener('paste', function(event) {
+            event.preventDefault();
+            
+            // Get clipboard data
+            const clipboardData = event.clipboardData || window.clipboardData;
+            let pastedText = clipboardData.getData('text');
+            
+            // Clean the pasted text to remove any problematic characters
+            pastedText = pastedText.replace(/[^\x00-\x7F\uAC00-\uD7A3\u3130-\u318F]/g, '');
+            
+            // Insert the cleaned text at cursor position
+            const input = event.target;
+            const startPos = input.selectionStart;
+            const endPos = input.selectionEnd;
+            const textBefore = input.value.substring(0, startPos);
+            const textAfter = input.value.substring(endPos);
+            
+            input.value = textBefore + pastedText + textAfter;
+            
+            // Set cursor position after pasted text
+            const newCursorPos = startPos + pastedText.length;
+            input.setSelectionRange(newCursorPos, newCursorPos);
+            
+            // Update the preview
+            updateConversionPreview();
+        });
 
         // Message modal textarea event listener
         document.getElementById('messageModalTextarea').addEventListener('input', updateModalPreview);
         
-        // Close modals on Escape key
+        // Add paste event listener for proper clipboard handling
+        document.getElementById('messageModalTextarea').addEventListener('paste', function(event) {
+            event.preventDefault();
+            
+            // Get clipboard data
+            const clipboardData = event.clipboardData || window.clipboardData;
+            let pastedText = clipboardData.getData('text');
+            
+            // Clean the pasted text to remove any problematic characters
+            pastedText = pastedText.replace(/[^\x00-\x7F\uAC00-\uD7A3\u3130-\u318F]/g, '');
+            
+            // Insert the cleaned text at cursor position
+            const textarea = event.target;
+            const startPos = textarea.selectionStart;
+            const endPos = textarea.selectionEnd;
+            const textBefore = textarea.value.substring(0, startPos);
+            const textAfter = textarea.value.substring(endPos);
+            
+            textarea.value = textBefore + pastedText + textAfter;
+            
+            // Set cursor position after pasted text
+            const newCursorPos = startPos + pastedText.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            
+            // Update the preview
+            updateModalPreview();
+        });
+        
+        // Close modals on Escape key and handle keyboard shortcuts
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 if (document.getElementById('logModal').style.display === 'flex') {
@@ -1230,6 +1298,12 @@
                 if (document.getElementById('messageModal').style.display === 'flex') {
                     closeMessageModal();
                 }
+            }
+            
+            // Handle Ctrl+V / Cmd+V for paste operations
+            if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+                // Let the paste event handlers handle this
+                // Don't prevent default here to allow normal paste behavior
             }
         });
 
