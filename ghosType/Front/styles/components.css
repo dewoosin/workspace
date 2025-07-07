@@ -1,0 +1,187 @@
+/* Status Component */
+.status {
+    padding: 10px 20px;
+    border-radius: 25px;
+    margin: 20px 0;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.status.disconnected { background: #f8d7da; color: #721c24; }
+.status.connecting { background: #fff3cd; color: #856404; }
+.status.connected { background: #d4edda; color: #155724; }
+
+/* Button Styles */
+button {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 50px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 10px;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Typing Speed Control */
+.typing-speed-control {
+    margin: 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.typing-speed-control label {
+    color: #495057;
+    font-weight: 500;
+}
+
+.typing-speed-control select {
+    padding: 8px 15px;
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    background: white;
+    color: #333;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.typing-speed-control select:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.typing-speed-control select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+/* Input Fields */
+input[type="text"] {
+    width: 85%;
+    padding: 12px 20px;
+    border: 2px solid #ddd;
+    border-radius: 25px;
+    font-size: 1.1em;
+    margin-right: 10px;
+    transition: all 0.3s ease;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.send-btn {
+    padding: 12px 20px;
+    font-size: 0.9em;
+}
+
+/* Conversion Preview */
+.conversion-preview {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    text-align: left;
+    min-height: 60px;
+    transition: all 0.3s ease;
+}
+
+.conversion-preview.korean {
+    border-color: #28a745;
+    background: #d4edda;
+}
+
+.conversion-preview.english {
+    border-color: #007bff;
+    background: #d1ecf1;
+}
+
+.conversion-preview.mixed {
+    border-color: #ffc107;
+    background: #fff3cd;
+}
+
+.protocol-info {
+    font-size: 0.8em;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+/* Test Buttons */
+.test-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin: 15px 0;
+}
+
+.test-btn {
+    padding: 8px 16px;
+    font-size: 0.9em;
+    border-radius: 20px;
+    background: linear-gradient(45deg, #28a745, #20c997);
+}
+
+.test-btn:hover {
+    background: linear-gradient(45deg, #218838, #1ea383);
+}
+
+.korean-test-btn {
+    background: linear-gradient(45deg, #dc3545, #e83e8c);
+}
+
+.korean-test-btn:hover {
+    background: linear-gradient(45deg, #c82333, #d91a72);
+}
+
+.special-btn {
+    background: linear-gradient(45deg, #6f42c1, #e83e8c);
+}
+
+.special-btn:hover {
+    background: linear-gradient(45deg, #5a2d91, #d91a72);
+}
+
+/* Keyboard Test Section */
+.keyboard-test {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    border: 1px solid #dee2e6;
+}
+
+.keyboard-test h4 {
+    color: #495057;
+    margin-bottom: 15px;
+}
+
+.keyboard-test h5 {
+    color: #6c757d;
+    margin: 15px 0 10px;
+    font-size: 1em;
+}

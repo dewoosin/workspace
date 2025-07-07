@@ -27,6 +27,10 @@ bool systemReady = false;
 bool usbHidReady = false;
 uint8_t errorCount = 0;
 
+// 타이핑 속도 제어
+uint8_t typingSpeedCPS = 6;  // 기본값: 6 characters per second
+uint32_t baseTypingDelay = 167;  // 1000ms / 6 cps = ~167ms
+
 // ===== 키보드 모드 관리 =====
 enum KeyboardMode {
     MODE_UNKNOWN = 0,    // 알 수 없음 (초기 상태)
@@ -42,6 +46,7 @@ unsigned long lastModeChange = 0;                 // 마지막 모드 변경 시
 #define PROTOCOL_ENGLISH "GHTYPE_ENG:"
 #define PROTOCOL_KOREAN "GHTYPE_KOR:"
 #define PROTOCOL_SPECIAL "GHTYPE_SPE:"
+#define PROTOCOL_CONFIG "GHTYPE_CFG:"
 
 // 함수 선언
 void initializeSystem();
@@ -54,7 +59,9 @@ void processReceivedData(const std::string& data);
 void processEnglishText(const String& text);
 void processKoreanJamo(const String& jamoKeys);
 void processSpecialCommand(const String& command);
+void processConfiguration(const String& config);
 void typeWithSmartTiming(const String& text);
+void updateTypingSpeed(uint8_t newSpeedCPS);
 void handleSerialCommands();
 void printHelp();
 void resetSystem();
@@ -140,6 +147,12 @@ void processReceivedData(const std::string& data) {
         String specialCmd = dataStr.substring(strlen(PROTOCOL_SPECIAL));
         Serial.printf("🎹 특수 명령: \"%s\"\n", specialCmd.c_str());
         processSpecialCommand(specialCmd);
+        
+    } else if (dataStr.startsWith(PROTOCOL_CONFIG)) {
+        // 설정 처리
+        String configData = dataStr.substring(strlen(PROTOCOL_CONFIG));
+        Serial.printf("⚙️ 설정 변경: \"%s\"\n", configData.c_str());
+        processConfiguration(configData);
         
     } else {
         // 프로토콜 없으면 기본 영문으로 처리
@@ -263,9 +276,54 @@ void processSpecialCommand(const String& command) {
     delay(50);
 }
 
+// ===== 설정 처리 (JSON 파싱) =====
+void processConfiguration(const String& config) {
+    // 간단한 JSON 파싱 (mode와 speed_cps만 추출)
+    // 예: {"mode":"typing","speed_cps":6}
+    
+    int speedIndex = config.indexOf("\"speed_cps\":");
+    if (speedIndex != -1) {
+        // speed_cps 값 추출
+        int valueStart = speedIndex + 12; // "speed_cps": 길이
+        int valueEnd = config.indexOf(',', valueStart);
+        if (valueEnd == -1) valueEnd = config.indexOf('}', valueStart);
+        
+        if (valueEnd != -1) {
+            String speedStr = config.substring(valueStart, valueEnd);
+            speedStr.trim();
+            int newSpeed = speedStr.toInt();
+            
+            if (newSpeed >= 1 && newSpeed <= 20) {
+                updateTypingSpeed(newSpeed);
+            } else {
+                Serial.printf("❌ 잘못된 속도 값: %d (1-20 범위만 허용)\n", newSpeed);
+            }
+        }
+    }
+}
+
+// ===== 타이핑 속도 업데이트 =====
+void updateTypingSpeed(uint8_t newSpeedCPS) {
+    typingSpeedCPS = newSpeedCPS;
+    baseTypingDelay = 1000 / typingSpeedCPS;
+    
+    Serial.printf("⚡ 타이핑 속도 변경: %d chars/sec (기본 지연: %dms)\n", 
+                  typingSpeedCPS, baseTypingDelay);
+    
+    // BLE로 확인 메시지 전송
+    if (bleManager) {
+        String response = String("Speed updated: ") + String(typingSpeedCPS) + " cps";
+        bleManager->sendNotification(response.c_str());
+    }
+}
+
 // ===== 스마트 타이핑 (자연스러운 속도) =====
 void typeWithSmartTiming(const String& text) {
-    Serial.printf("⌨️ 스마트 타이핑: \"%s\" (%d 문자)\n", text.c_str(), text.length());
+    Serial.printf("⌨️ 스마트 타이핑: \"%s\" (%d 문자, %d cps)\n", 
+                  text.c_str(), text.length(), typingSpeedCPS);
+    
+    // 랜덤 지연을 위한 범위 계산 (기본 지연의 30-50%)
+    uint32_t randomRange = baseTypingDelay / 3;
     
     for (int i = 0; i < text.length(); i++) {
         char c = text.charAt(i);
@@ -273,11 +331,11 @@ void typeWithSmartTiming(const String& text) {
         if (c == '\n') {
             Keyboard.press(KEY_RETURN);
             Keyboard.releaseAll();
-            delay(100);
+            delay(100);  // 특수 키는 고정 지연
         } else if (c == '\t') {
             Keyboard.press(KEY_TAB);
             Keyboard.releaseAll();
-            delay(100);
+            delay(100);  // 특수 키는 고정 지연
         } else if (c >= 'A' && c <= 'Z') {
             // Shift + 문자
             Keyboard.press(KEY_LEFT_SHIFT);
@@ -285,21 +343,24 @@ void typeWithSmartTiming(const String& text) {
             Keyboard.press(c);
             delay(30);
             Keyboard.releaseAll();
-            delay(60 + random(40));  // 60-100ms 랜덤
+            // 속도에 맞춘 지연 + 랜덤
+            delay(baseTypingDelay + random(randomRange));
         } else {
             Keyboard.write(c);
-            delay(70 + random(50));  // 70-120ms 랜덤
+            // 속도에 맞춘 지연 + 랜덤
+            delay(baseTypingDelay + random(randomRange));
         }
         
         // 긴 텍스트 진행률 표시
         if (text.length() > 30 && i > 0 && i % 15 == 0) {
-            Serial.printf("📝 진행: %d/%d (%.1f%%)\n", 
+            Serial.printf("📝 진행: %d/%d (%.1f%%) @ %d cps\n", 
                           i, text.length(), 
-                          (float)i * 100.0 / text.length());
+                          (float)i * 100.0 / text.length(),
+                          typingSpeedCPS);
         }
     }
     
-    Serial.println("✅ 타이핑 완료");
+    Serial.printf("✅ 타이핑 완료 (%d문자 @ %d cps)\n", text.length(), typingSpeedCPS);
 }
 
 // ===== 시스템 초기화 =====
@@ -324,8 +385,9 @@ void initializeSystem() {
     Serial.println("   영문: " PROTOCOL_ENGLISH "[텍스트]");
     Serial.println("   한글: " PROTOCOL_KOREAN "[자모키]");
     Serial.println("   특수: " PROTOCOL_SPECIAL "[명령]");
+    Serial.println("   설정: " PROTOCOL_CONFIG "[JSON]");
     Serial.println("   🎯 스마트 키보드 모드 자동 전환");
-    Serial.println("   ⌨️ 자연스러운 타이핑 속도");
+    Serial.printf("   ⚡ 타이핑 속도: %d chars/sec\n", typingSpeedCPS);
 }
 
 // ===== 하드웨어 초기화 =====
@@ -387,6 +449,7 @@ void handleSerialCommands() {
         }
         Serial.printf("⌨️ USB HID: %s\n", usbHidReady ? "활성화" : "비활성화");
         Serial.printf("🎯 현재 키보드 모드: %s\n", getKeyboardModeString(currentKeyboardMode).c_str());
+        Serial.printf("⚡ 타이핑 속도: %d chars/sec (지연: %dms)\n", typingSpeedCPS, baseTypingDelay);
     }
     else if (command == "help" || command == "h" || command == "?") {
         printHelp();
@@ -428,6 +491,15 @@ void handleSerialCommands() {
         String special = command.substring(4);
         processSpecialCommand(special);
     }
+    else if (command.startsWith("speed:")) {
+        String speedStr = command.substring(6);
+        int newSpeed = speedStr.toInt();
+        if (newSpeed >= 1 && newSpeed <= 20) {
+            updateTypingSpeed(newSpeed);
+        } else {
+            Serial.println("❌ 속도는 1-20 범위여야 합니다");
+        }
+    }
     else {
         Serial.println("❓ 알 수 없는 명령. 'help' 입력하여 도움말 확인");
     }
@@ -436,33 +508,42 @@ void handleSerialCommands() {
 // ===== 도움말 출력 =====
 void printHelp() {
     Serial.println("\n📚 사용 가능한 명령:");
-    Serial.println("┌─────────────┬──────────────────────────────┐");
-    Serial.println("│ 명령        │ 설명                         │");
-    Serial.println("├─────────────┼──────────────────────────────┤");
-    Serial.println("│ status (s)  │ 상태 정보                    │");
-    Serial.println("│ test        │ 영문 키보드 테스트           │");
-    Serial.println("│ testko      │ 한글 키보드 테스트           │");
-    Serial.println("│ eng         │ 영문 모드로 강제 전환        │");
-    Serial.println("│ kor         │ 한글 모드로 강제 전환        │");
-    Serial.println("│ mode        │ 현재 키보드 모드 확인        │");
-    Serial.println("│ eng:[text]  │ 영문 텍스트 직접 입력        │");
-    Serial.println("│ kor:[jamo]  │ 한글 자모 키 직접 입력       │");
-    Serial.println("│ spe:[cmd]   │ 특수 명령 직접 실행          │");
-    Serial.println("│ reset (r)   │ 시스템 재시작                │");
-    Serial.println("│ help (h,?)  │ 이 도움말                    │");
-    Serial.println("└─────────────┴──────────────────────────────┘");
+    Serial.println("┌──────────────┬──────────────────────────────┐");
+    Serial.println("│ 명령         │ 설명                         │");
+    Serial.println("├──────────────┼──────────────────────────────┤");
+    Serial.println("│ status (s)   │ 상태 정보                    │");
+    Serial.println("│ test         │ 영문 키보드 테스트           │");
+    Serial.println("│ testko       │ 한글 키보드 테스트           │");
+    Serial.println("│ eng          │ 영문 모드로 강제 전환        │");
+    Serial.println("│ kor          │ 한글 모드로 강제 전환        │");
+    Serial.println("│ mode         │ 현재 키보드 모드 확인        │");
+    Serial.println("│ speed:[1-20] │ 타이핑 속도 변경 (cps)       │");
+    Serial.println("│ eng:[text]   │ 영문 텍스트 직접 입력        │");
+    Serial.println("│ kor:[jamo]   │ 한글 자모 키 직접 입력       │");
+    Serial.println("│ spe:[cmd]    │ 특수 명령 직접 실행          │");
+    Serial.println("│ reset (r)    │ 시스템 재시작                │");
+    Serial.println("│ help (h,?)   │ 이 도움말                    │");
+    Serial.println("└──────────────┴──────────────────────────────┘");
     
     Serial.println("\n💡 프로토콜 사용법:");
     Serial.println("   🔤 영문: " PROTOCOL_ENGLISH "Hello World");
     Serial.println("   🇰🇷 한글: " PROTOCOL_KOREAN "dkssud");
     Serial.println("   🎹 특수: " PROTOCOL_SPECIAL "enter");
+    Serial.println("   ⚙️ 설정: " PROTOCOL_CONFIG "{\"mode\":\"typing\",\"speed_cps\":6}");
     
     Serial.println("\n🎯 특수 명령어:");
     Serial.println("   enter, tab, backspace, space");
     Serial.println("   ctrl+c, ctrl+v, alt+tab");
     Serial.println("   haneng, eng, reset_mode");
     
-    Serial.printf("\n📊 현재 키보드 모드: %s\n", getKeyboardModeString(currentKeyboardMode).c_str());
+    Serial.println("\n⚡ 타이핑 속도:");
+    Serial.println("   3 cps  = 느림 (Slow)");
+    Serial.println("   6 cps  = 보통 (Normal)");
+    Serial.println("   10 cps = 빠름 (Fast)");
+    
+    Serial.printf("\n📊 현재 상태:");
+    Serial.printf("   키보드 모드: %s\n", getKeyboardModeString(currentKeyboardMode).c_str());
+    Serial.printf("   타이핑 속도: %d chars/sec\n", typingSpeedCPS);
 }
 
 // ===== 시스템 재시작 =====

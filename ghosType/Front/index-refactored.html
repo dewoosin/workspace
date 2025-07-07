@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GHOSTYPE BLE Keyboard - Web Bluetooth interface for Korean and English text input">
+    <title>GHOSTYPE BLE 테스트 (한글 지원)</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="styles/reset.css">
+    <link rel="stylesheet" href="styles/layout.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/modals.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+</head>
+<body>
+    <div class="container" role="main">
+        <!-- Header -->
+        <header>
+            <div class="logo">👻 GHOSTYPE</div>
+            <div class="subtitle">BLE 키보드 웹 테스트 (한글 지원)</div>
+        </header>
+
+        <!-- Status Display -->
+        <div id="status" class="status disconnected" role="status" aria-live="polite">
+            🔴 연결 안됨 - 연결 버튼을 클릭하세요
+        </div>
+
+        <!-- Connection Controls -->
+        <div class="controls" role="group" aria-label="연결 컨트롤">
+            <button id="connectBtn" onclick="connectDevice()" aria-label="BLE 디바이스 연결">🔗 연결</button>
+            <button id="disconnectBtn" onclick="disconnectDevice()" disabled aria-label="BLE 디바이스 연결 해제">❌ 연결 해제</button>
+            <button class="view-logs-btn" onclick="toggleLogModal()" aria-label="연결 로그 보기">📋 View Logs</button>
+        </div>
+
+        <!-- Typing Speed Control -->
+        <div class="typing-speed-control" role="group" aria-label="타이핑 속도 설정">
+            <label for="typingSpeed">⚡ Typing Speed (chars/sec):</label>
+            <select id="typingSpeed" onchange="updateTypingSpeed()" aria-label="타이핑 속도 선택">
+                <option value="3">3 (Slow)</option>
+                <option value="6" selected>6 (Normal)</option>
+                <option value="10">10 (Fast)</option>
+            </select>
+        </div>
+
+        <!-- Message Input Area -->
+        <div class="message-area">
+            <input type="text" id="messageInput" placeholder="한글/영문 메시지를 입력하세요..." onclick="openMessageModal()" aria-label="메시지 입력">
+            <button class="send-btn" id="sendBtn" onclick="startCountdown()" disabled aria-label="메시지 전송">📤 전송</button>
+        </div>
+
+        <!-- Conversion Preview -->
+        <div class="conversion-preview" id="conversionPreview" role="region" aria-label="텍스트 변환 미리보기" aria-live="polite">
+            <strong>🔄 변환 미리보기:</strong><br>
+            <span id="previewText">메시지를 입력하면 변환 결과가 여기에 표시됩니다</span>
+            <div class="protocol-info" id="protocolInfo"></div>
+        </div>
+
+        <!-- Keyboard Test Section -->
+        <div class="keyboard-test" id="keyboardTest" style="display: none;" role="region" aria-label="키보드 테스트 영역">
+            <h4>⌨️ 키보드 테스트:</h4>
+            
+            <h5>🔤 영문 테스트:</h5>
+            <div class="test-buttons" role="group" aria-label="영문 테스트 버튼들">
+                <button class="test-btn" onclick="testText('Hello World!')" aria-label="Hello World 텍스트 전송">Hello World!</button>
+                <button class="test-btn" onclick="testText('GHOSTYPE Test 123')" aria-label="GHOSTYPE Test 123 전송">영문 테스트</button>
+                <button class="test-btn" onclick="testText('The quick brown fox')" aria-label="The quick brown fox 전송">타이핑 연습</button>
+                <button class="test-btn" onclick="testText('Programming is fun!')" aria-label="Programming is fun 전송">프로그래밍</button>
+            </div>
+
+            <h5>🇰🇷 한글 테스트:</h5>
+            <div class="test-buttons" role="group" aria-label="한글 테스트 버튼들">
+                <button class="korean-test-btn" onclick="testText('안녕하세요')" aria-label="안녕하세요 전송">안녕하세요</button>
+                <button class="korean-test-btn" onclick="testText('테스트입니다')" aria-label="테스트입니다 전송">테스트입니다</button>
+                <button class="korean-test-btn" onclick="testText('한글 키보드')" aria-label="한글 키보드 전송">한글 키보드</button>
+                <button class="korean-test-btn" onclick="testText('프로그래밍')" aria-label="프로그래밍 전송">프로그래밍</button>
+            </div>
+
+            <h5>🌐 혼합 테스트:</h5>
+            <div class="test-buttons" role="group" aria-label="한글 영문 혼합 테스트 버튼들">
+                <button class="test-btn" onclick="testText('Hello 안녕')">Hello 안녕</button>
+                <button class="test-btn" onclick="testText('GHOSTYPE 한글')">GHOSTYPE 한글</button>
+                <button class="test-btn" onclick="testText('Programming은 재미있어')">Programming은 재미있어</button>
+                <button class="test-btn" onclick="testText('오늘 날씨가 nice하네요')">오늘 날씨가 nice하네요</button>
+            </div>
+
+            <h5>🎹 특수 키:</h5>
+            <div class="test-buttons" role="group" aria-label="특수 키 테스트 버튼들">
+                <button class="special-btn" onclick="testSpecial('enter')" aria-label="Enter 키 전송">Enter</button>
+                <button class="special-btn" onclick="testSpecial('tab')" aria-label="Tab 키 전송">Tab</button>
+                <button class="special-btn" onclick="testSpecial('space')" aria-label="Space 키 전송">Space</button>
+                <button class="special-btn" onclick="testSpecial('backspace')" aria-label="Backspace 키 전송">Backspace</button>
+                <button class="special-btn" onclick="testSpecial('ctrl+c')" aria-label="Ctrl+C 명령 전송">Ctrl+C</button>
+                <button class="special-btn" onclick="testSpecial('ctrl+v')" aria-label="Ctrl+V 명령 전송">Ctrl+V</button>
+            </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+            <h4>📋 사용 방법:</h4>
+            <ul>
+                <li><strong>Chrome/Edge 브라우저</strong>에서만 동작합니다</li>
+                <li>연결 버튼을 누르고 <strong>"GHOSTYPE-6FED"</strong> 선택</li>
+                <li><strong>한글/영문/혼합 텍스트</strong> 모두 지원됩니다</li>
+                <li>한글은 자동으로 <strong>자모 키 조합</strong>으로 변환됩니다</li>
+                <li>입력 전 <strong>5초 카운트다운</strong>으로 안전하게 전송</li>
+                <li>메모장을 열어두고 테스트해보세요!</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            💡 한글 지원: ㄱ-ㅎ, ㅏ-ㅣ 자모를 QWERTY 키로 자동 변환
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <!-- Countdown Modal -->
+    <div id="countdownModal" class="countdown-modal" style="display: none;">
+        <div class="countdown-content">
+            <h3>⌨️ 키보드 입력 준비</h3>
+            <div class="countdown-number" id="countdownNumber">5</div>
+            <div class="countdown-message" id="countdownMessage">메모장에 커서를 놓고 기다리세요...</div>
+            <div class="countdown-preview" id="countdownPreview">
+                <strong>원본:</strong> <span id="originalText"></span><br>
+                <strong>변환:</strong> <span id="convertedText"></span><br>
+                <strong>프로토콜:</strong> <span id="protocolText"></span>
+            </div>
+            <button class="cancel-btn" onclick="cancelCountdown()">❌ 취소</button>
+        </div>
+    </div>
+
+    <!-- Log Modal -->
+    <div id="logModal" class="log-modal" style="display: none;" role="dialog" aria-labelledby="logModalTitle" aria-describedby="logModalBody">
+        <div class="log-modal-content">
+            <div class="log-modal-header">
+                <h3 class="log-modal-title" id="logModalTitle">📋 Connection Logs</h3>
+                <button class="log-modal-close" onclick="toggleLogModal()" aria-label="로그 모달 닫기">×</button>
+            </div>
+            <div class="log-modal-body" id="logModalBody" role="log" aria-live="polite">
+                <div class="log-entry log-info">🌐 Web Bluetooth 준비됨 (한글 자모 변환 지원)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Input Modal -->
+    <div id="messageModal" class="message-modal" style="display: none;" role="dialog" aria-labelledby="messageModalTitle">
+        <div class="message-modal-content">
+            <div class="message-modal-header">
+                <h3 class="message-modal-title" id="messageModalTitle">✍️ Message Editor</h3>
+            </div>
+            <textarea 
+                id="messageModalTextarea" 
+                class="message-modal-textarea" 
+                placeholder="한글/영문 메시지를 입력하세요..."
+                aria-label="확장된 메시지 입력 영역"
+            ></textarea>
+            <div class="message-modal-preview" id="messageModalPreview">
+                <strong>🔄 변환 미리보기:</strong><br>
+                <span id="modalPreviewText">메시지를 입력하면 변환 결과가 여기에 표시됩니다</span>
+                <div class="protocol-info" id="modalProtocolInfo"></div>
+            </div>
+            <div class="message-modal-footer">
+                <button class="cancel-btn" onclick="closeMessageModal()" aria-label="취소">❌ Cancel</button>
+                <button class="done-btn" onclick="applyMessageModal()" aria-label="적용">✓ Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script type="module" src="scripts/main.js"></script>
+</body>
+</html>
