@@ -91,12 +91,13 @@
         }
 
         input[type="text"] {
-            width: 70%;
-            padding: 12px;
+            width: 85%;
+            padding: 12px 20px;
             border: 2px solid #ddd;
             border-radius: 25px;
-            font-size: 1em;
+            font-size: 1.1em;
             margin-right: 10px;
+            transition: all 0.3s ease;
         }
 
         input[type="text"]:focus {
@@ -154,6 +155,89 @@
             text-align: left;
             font-family: 'Courier New', monospace;
             font-size: 0.9em;
+        }
+
+        /* Log Modal Styles */
+        .log-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            backdrop-filter: blur(5px);
+        }
+
+        .log-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlide 0.3s ease-out;
+        }
+
+        .log-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .log-modal-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .log-modal-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-size: 1.2em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .log-modal-close:hover {
+            background: #c82333;
+            transform: rotate(90deg);
+        }
+
+        .log-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .view-logs-btn {
+            background: linear-gradient(45deg, #17a2b8, #20c997);
+            padding: 10px 20px;
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+
+        .view-logs-btn:hover {
+            background: linear-gradient(45deg, #138496, #1aa379);
         }
 
         .log-entry {
@@ -340,56 +424,202 @@
             background: #e2e3e5;
             color: #383d41;
         }
+
+        /* Message Input Modal Styles */
+        .message-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1002;
+            backdrop-filter: blur(5px);
+        }
+
+        .message-modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlide 0.3s ease-out;
+        }
+
+        .message-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .message-modal-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .message-modal-textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            font-size: 1.2em;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+
+        .message-modal-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .message-modal-preview {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .message-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .done-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .done-btn:hover {
+            background: linear-gradient(45deg, #218838, #1aa383);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .logo {
+                font-size: 2em;
+            }
+
+            .subtitle {
+                font-size: 1em;
+            }
+
+            button {
+                padding: 12px 20px;
+                font-size: 1em;
+                min-width: 100px;
+            }
+
+            input[type="text"] {
+                width: 100%;
+                margin-bottom: 10px;
+                margin-right: 0;
+            }
+
+            .message-area {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .send-btn {
+                width: 100%;
+            }
+
+            .test-buttons {
+                gap: 5px;
+            }
+
+            .test-btn, .korean-test-btn, .special-btn {
+                padding: 6px 12px;
+                font-size: 0.8em;
+            }
+
+            .message-modal-content {
+                padding: 20px;
+                width: 95%;
+            }
+
+            .message-modal-textarea {
+                min-height: 200px;
+                font-size: 1em;
+            }
+
+            .log-modal-content {
+                padding: 20px;
+                width: 95%;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" role="main">
         <div class="logo">👻 GHOSTYPE</div>
         <div class="subtitle">BLE 키보드 웹 테스트 (한글 지원)</div>
 
-        <div id="status" class="status disconnected">
+        <div id="status" class="status disconnected" role="status" aria-live="polite">
             🔴 연결 안됨 - 연결 버튼을 클릭하세요
         </div>
 
-        <div class="controls">
-            <button id="connectBtn" onclick="connectDevice()">🔗 연결</button>
-            <button id="disconnectBtn" onclick="disconnectDevice()" disabled>❌ 연결 해제</button>
+        <div class="controls" role="group" aria-label="연결 컨트롤">
+            <button id="connectBtn" onclick="connectDevice()" aria-label="BLE 디바이스 연결">🔗 연결</button>
+            <button id="disconnectBtn" onclick="disconnectDevice()" disabled aria-label="BLE 디바이스 연결 해제">❌ 연결 해제</button>
+            <button class="view-logs-btn" onclick="toggleLogModal()" aria-label="연결 로그 보기">📋 View Logs</button>
         </div>
 
         <div class="message-area">
-            <input type="text" id="messageInput" placeholder="한글/영문 메시지를 입력하세요...">
-            <button class="send-btn" id="sendBtn" onclick="startCountdown()" disabled>📤 전송</button>
+            <input type="text" id="messageInput" placeholder="한글/영문 메시지를 입력하세요..." onclick="openMessageModal()" aria-label="메시지 입력">
+            <button class="send-btn" id="sendBtn" onclick="startCountdown()" disabled aria-label="메시지 전송">📤 전송</button>
         </div>
 
         <!-- 변환 미리보기 -->
-        <div class="conversion-preview" id="conversionPreview">
+        <div class="conversion-preview" id="conversionPreview" role="region" aria-label="텍스트 변환 미리보기" aria-live="polite">
             <strong>🔄 변환 미리보기:</strong><br>
             <span id="previewText">메시지를 입력하면 변환 결과가 여기에 표시됩니다</span>
             <div class="protocol-info" id="protocolInfo"></div>
         </div>
 
         <!-- 키보드 테스트 영역 -->
-        <div class="keyboard-test" id="keyboardTest" style="display: none;">
+        <div class="keyboard-test" id="keyboardTest" style="display: none;" role="region" aria-label="키보드 테스트 영역">
             <h4>⌨️ 키보드 테스트:</h4>
             
             <h5>🔤 영문 테스트:</h5>
-            <div class="test-buttons">
-                <button class="test-btn" onclick="testText('Hello World!')">Hello World!</button>
-                <button class="test-btn" onclick="testText('GHOSTYPE Test 123')">영문 테스트</button>
-                <button class="test-btn" onclick="testText('The quick brown fox')">타이핑 연습</button>
-                <button class="test-btn" onclick="testText('Programming is fun!')">프로그래밍</button>
+            <div class="test-buttons" role="group" aria-label="영문 테스트 버튼들">
+                <button class="test-btn" onclick="testText('Hello World!')" aria-label="Hello World 텍스트 전송">Hello World!</button>
+                <button class="test-btn" onclick="testText('GHOSTYPE Test 123')" aria-label="GHOSTYPE Test 123 전송">영문 테스트</button>
+                <button class="test-btn" onclick="testText('The quick brown fox')" aria-label="The quick brown fox 전송">타이핑 연습</button>
+                <button class="test-btn" onclick="testText('Programming is fun!')" aria-label="Programming is fun 전송">프로그래밍</button>
             </div>
 
             <h5>🇰🇷 한글 테스트:</h5>
-            <div class="test-buttons">
-                <button class="korean-test-btn" onclick="testText('안녕하세요')">안녕하세요</button>
-                <button class="korean-test-btn" onclick="testText('테스트입니다')">테스트입니다</button>
-                <button class="korean-test-btn" onclick="testText('한글 키보드')">한글 키보드</button>
-                <button class="korean-test-btn" onclick="testText('프로그래밍')">프로그래밍</button>
+            <div class="test-buttons" role="group" aria-label="한글 테스트 버튼들">
+                <button class="korean-test-btn" onclick="testText('안녕하세요')" aria-label="안녕하세요 전송">안녕하세요</button>
+                <button class="korean-test-btn" onclick="testText('테스트입니다')" aria-label="테스트입니다 전송">테스트입니다</button>
+                <button class="korean-test-btn" onclick="testText('한글 키보드')" aria-label="한글 키보드 전송">한글 키보드</button>
+                <button class="korean-test-btn" onclick="testText('프로그래밍')" aria-label="프로그래밍 전송">프로그래밍</button>
             </div>
 
             <h5>🌐 혼합 테스트:</h5>
-            <div class="test-buttons">
+            <div class="test-buttons" role="group" aria-label="한글 영문 혼합 테스트 버튼들">
                 <button class="test-btn" onclick="testText('Hello 안녕')">Hello 안녕</button>
                 <button class="test-btn" onclick="testText('GHOSTYPE 한글')">GHOSTYPE 한글</button>
                 <button class="test-btn" onclick="testText('Programming은 재미있어')">Programming은 재미있어</button>
@@ -397,13 +627,13 @@
             </div>
 
             <h5>🎹 특수 키:</h5>
-            <div class="test-buttons">
-                <button class="special-btn" onclick="testSpecial('enter')">Enter</button>
-                <button class="special-btn" onclick="testSpecial('tab')">Tab</button>
-                <button class="special-btn" onclick="testSpecial('space')">Space</button>
-                <button class="special-btn" onclick="testSpecial('backspace')">Backspace</button>
-                <button class="special-btn" onclick="testSpecial('ctrl+c')">Ctrl+C</button>
-                <button class="special-btn" onclick="testSpecial('ctrl+v')">Ctrl+V</button>
+            <div class="test-buttons" role="group" aria-label="특수 키 테스트 버튼들">
+                <button class="special-btn" onclick="testSpecial('enter')" aria-label="Enter 키 전송">Enter</button>
+                <button class="special-btn" onclick="testSpecial('tab')" aria-label="Tab 키 전송">Tab</button>
+                <button class="special-btn" onclick="testSpecial('space')" aria-label="Space 키 전송">Space</button>
+                <button class="special-btn" onclick="testSpecial('backspace')" aria-label="Backspace 키 전송">Backspace</button>
+                <button class="special-btn" onclick="testSpecial('ctrl+c')" aria-label="Ctrl+C 명령 전송">Ctrl+C</button>
+                <button class="special-btn" onclick="testSpecial('ctrl+v')" aria-label="Ctrl+V 명령 전송">Ctrl+V</button>
             </div>
         </div>
 
@@ -422,8 +652,41 @@
             </div>
         </div>
 
-        <div class="log" id="log">
-            <div class="log-entry log-info">🌐 Web Bluetooth 준비됨 (한글 자모 변환 지원)</div>
+        <!-- Log Modal -->
+        <div id="logModal" class="log-modal" style="display: none;" role="dialog" aria-labelledby="logModalTitle" aria-describedby="logModalBody">
+            <div class="log-modal-content">
+                <div class="log-modal-header">
+                    <h3 class="log-modal-title" id="logModalTitle">📋 Connection Logs</h3>
+                    <button class="log-modal-close" onclick="toggleLogModal()" aria-label="로그 모달 닫기">×</button>
+                </div>
+                <div class="log-modal-body" id="logModalBody" role="log" aria-live="polite">
+                    <div class="log-entry log-info">🌐 Web Bluetooth 준비됨 (한글 자모 변환 지원)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Input Modal -->
+        <div id="messageModal" class="message-modal" style="display: none;" role="dialog" aria-labelledby="messageModalTitle">
+            <div class="message-modal-content">
+                <div class="message-modal-header">
+                    <h3 class="message-modal-title" id="messageModalTitle">✍️ Message Editor</h3>
+                </div>
+                <textarea 
+                    id="messageModalTextarea" 
+                    class="message-modal-textarea" 
+                    placeholder="한글/영문 메시지를 입력하세요..."
+                    aria-label="확장된 메시지 입력 영역"
+                ></textarea>
+                <div class="message-modal-preview" id="messageModalPreview">
+                    <strong>🔄 변환 미리보기:</strong><br>
+                    <span id="modalPreviewText">메시지를 입력하면 변환 결과가 여기에 표시됩니다</span>
+                    <div class="protocol-info" id="modalProtocolInfo"></div>
+                </div>
+                <div class="message-modal-footer">
+                    <button class="cancel-btn" onclick="closeMessageModal()" aria-label="취소">❌ Cancel</button>
+                    <button class="done-btn" onclick="applyMessageModal()" aria-label="적용">✓ Done</button>
+                </div>
+            </div>
         </div>
 
         <div class="info-box">
@@ -632,12 +895,96 @@
         // ===== BLE 통신 함수들 =====
 
         function addLog(message, type = 'info') {
-            const log = document.getElementById('log');
+            const log = document.getElementById('logModalBody');
             const entry = document.createElement('div');
             entry.className = `log-entry log-${type}`;
             entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
             log.appendChild(entry);
             log.scrollTop = log.scrollHeight;
+        }
+
+        function toggleLogModal() {
+            const modal = document.getElementById('logModal');
+            modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Close modals when clicking outside
+        document.getElementById('logModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                toggleLogModal();
+            }
+        });
+
+        document.getElementById('messageModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeMessageModal();
+            }
+        });
+
+        document.getElementById('countdownModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                cancelCountdown();
+            }
+        });
+
+        // Message Modal Functions
+        function openMessageModal() {
+            const modal = document.getElementById('messageModal');
+            const textarea = document.getElementById('messageModalTextarea');
+            const input = document.getElementById('messageInput');
+            
+            // Copy current value to modal
+            textarea.value = input.value;
+            modal.style.display = 'flex';
+            
+            // Focus textarea and update preview
+            textarea.focus();
+            updateModalPreview();
+        }
+
+        function closeMessageModal() {
+            const modal = document.getElementById('messageModal');
+            modal.style.display = 'none';
+        }
+
+        function applyMessageModal() {
+            const textarea = document.getElementById('messageModalTextarea');
+            const input = document.getElementById('messageInput');
+            
+            // Copy value back to input
+            input.value = textarea.value;
+            updateConversionPreview();
+            closeMessageModal();
+        }
+
+        function updateModalPreview() {
+            const textarea = document.getElementById('messageModalTextarea');
+            const previewText = document.getElementById('modalPreviewText');
+            const protocolInfo = document.getElementById('modalProtocolInfo');
+            const text = textarea.value;
+            
+            if (!text) {
+                previewText.textContent = '메시지를 입력하면 변환 결과가 여기에 표시됩니다';
+                protocolInfo.textContent = '';
+                return;
+            }
+            
+            const result = convertTextWithProtocol(text);
+            
+            if (result.type === 'korean' || result.type === 'mixed') {
+                previewText.innerHTML = `
+                    <strong>원본:</strong> ${result.original}<br>
+                    <strong>자모:</strong> ${result.converted}<br>
+                    <strong>설명:</strong> ${result.description}
+                `;
+            } else {
+                previewText.innerHTML = `
+                    <strong>텍스트:</strong> ${result.original}<br>
+                    <strong>설명:</strong> ${result.description}
+                `;
+            }
+            
+            protocolInfo.textContent = `전송 프로토콜: ${result.protocol}`;
         }
 
         function updateStatus(message, type) {
@@ -866,7 +1213,23 @@
         document.getElementById('messageInput').addEventListener('input', updateConversionPreview);
         document.getElementById('messageInput').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
+                event.preventDefault();
                 startCountdown();
+            }
+        });
+
+        // Message modal textarea event listener
+        document.getElementById('messageModalTextarea').addEventListener('input', updateModalPreview);
+        
+        // Close modals on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                if (document.getElementById('logModal').style.display === 'flex') {
+                    toggleLogModal();
+                }
+                if (document.getElementById('messageModal').style.display === 'flex') {
+                    closeMessageModal();
+                }
             }
         });
 
