@@ -1,5 +1,5 @@
 // src/main.cpp
-// GHOSTYPE 상품화 버전 - 스마트 키보드 모드 전환
+// GHOSTYPE Production Firmware - Smart Keyboard Mode Switching
 
 #include <Arduino.h>
 #include "BLEConfig.h"
@@ -12,43 +12,43 @@
   // esp_chip_info.h functions are available through ESP.h
 #endif
 
-// USB HID 키보드
+// USB HID keyboard for T-Dongle-S3 hardware
 #include <USB.h>
 #include <USBHIDKeyboard.h>
 
-// 전역 객체
-BLENimbleManager* bleManager = nullptr;
-USBHIDKeyboard Keyboard;
+// Global hardware objects
+BLENimbleManager* bleManager = nullptr;  // BLE communication handler
+USBHIDKeyboard Keyboard;                 // USB HID keyboard interface
 
-// 상태 변수
-unsigned long lastStatusUpdate = 0;
-unsigned long lastHeartbeat = 0;
-bool systemReady = false;
-bool usbHidReady = false;
-uint8_t errorCount = 0;
+// System state variables
+unsigned long lastStatusUpdate = 0;      // For periodic status checks
+unsigned long lastHeartbeat = 0;         // For LED heartbeat indicator
+bool systemReady = false;                // Overall system initialization status
+bool usbHidReady = false;                // USB keyboard availability flag
+uint8_t errorCount = 0;                  // Error counter for auto-recovery
 
-// 타이핑 속도 제어
-uint8_t typingSpeedCPS = 6;  // 기본값: 6 characters per second
-uint32_t baseTypingDelay = 167;  // 1000ms / 6 cps = ~167ms
+// Typing speed control (adjustable via web interface)
+uint8_t typingSpeedCPS = 6;              // Characters per second (default: 6)
+uint32_t baseTypingDelay = 167;          // Base delay between keystrokes (1000ms / 6 cps)
 
-// ===== 키보드 모드 관리 =====
+// Keyboard mode management for Korean/English switching
 enum KeyboardMode {
-    MODE_UNKNOWN = 0,    // 알 수 없음 (초기 상태)
-    MODE_ENGLISH = 1,    // 영문 모드
-    MODE_KOREAN = 2      // 한글 모드
+    MODE_UNKNOWN = 0,    // Initial state - mode not determined
+    MODE_ENGLISH = 1,    // English input mode
+    MODE_KOREAN = 2      // Korean input mode (Hangul)
 };
 
-KeyboardMode currentKeyboardMode = MODE_UNKNOWN;  // 현재 키보드 모드
-unsigned long lastModeChange = 0;                 // 마지막 모드 변경 시간
+KeyboardMode currentKeyboardMode = MODE_UNKNOWN;  // Current active keyboard mode
+unsigned long lastModeChange = 0;                 // Timestamp of last mode switch
 
-// ===== 유니크한 프로토콜 정의 =====
+// Protocol definitions for parsing incoming BLE data
 #define PROTOCOL_PREFIX "GHTYPE_"
-#define PROTOCOL_ENGLISH "GHTYPE_ENG:"
-#define PROTOCOL_KOREAN "GHTYPE_KOR:"
-#define PROTOCOL_SPECIAL "GHTYPE_SPE:"
-#define PROTOCOL_CONFIG "GHTYPE_CFG:"
+#define PROTOCOL_ENGLISH "GHTYPE_ENG:"     // English text input
+#define PROTOCOL_KOREAN "GHTYPE_KOR:"      // Korean jamo key sequence
+#define PROTOCOL_SPECIAL "GHTYPE_SPE:"     // Special commands (enter, ctrl+c, etc.)
+#define PROTOCOL_CONFIG "GHTYPE_CFG:"      // Configuration changes (typing speed)
 
-// 함수 선언
+// Function declarations
 void initializeSystem();
 bool initializeHardware();
 void safeDelay(uint32_t ms);
@@ -63,26 +63,24 @@ void processConfiguration(const String& config);
 void typeWithSmartTiming(const String& text);
 void updateTypingSpeed(uint8_t newSpeedCPS);
 void handleSerialCommands();
-void printHelp();
 void resetSystem();
 
-// ===== 안전한 지연 함수 =====
+// Safe delay function that yields to prevent watchdog timeouts
 void safeDelay(uint32_t ms) {
     uint32_t start = millis();
     while (millis() - start < ms) {
-        yield();
+        yield();  // Allow other tasks to run
         delay(1);
     }
 }
 
-// ===== 키보드 모드 확인 및 전환 =====
+// Ensure keyboard is in correct mode before typing (with rate limiting)
 void ensureKeyboardMode(KeyboardMode targetMode) {
     if (currentKeyboardMode == targetMode) {
-        // 이미 원하는 모드면 스킵
-        return;
+        return;  // Already in target mode, no switch needed
     }
     
-    // 모드 변경이 너무 자주 일어나지 않도록 제한
+    // Prevent rapid mode changes (minimum 200ms between switches)
     if (millis() - lastModeChange < 200) {
         delay(200 - (millis() - lastModeChange));
     }
@@ -90,201 +88,168 @@ void ensureKeyboardMode(KeyboardMode targetMode) {
     forceKeyboardMode(targetMode);
 }
 
-// ===== 강제 키보드 모드 전환 =====
+// Force keyboard mode switch using Alt+Shift combination (Korean IME standard)
 void forceKeyboardMode(KeyboardMode mode) {
-    if (!usbHidReady) return;
+    if (!usbHidReady) return;  // Skip if USB keyboard not available
     
-    String modeStr = getKeyboardModeString(mode);
-    Serial.printf("🔄 키보드 모드 전환: %s → %s\n", 
-                  getKeyboardModeString(currentKeyboardMode).c_str(),
-                  modeStr.c_str());
-    
-    // Alt + Shift (한영키)
+    // Send Alt+Shift to toggle Korean/English input mode
     Keyboard.press(KEY_LEFT_ALT);
-    delay(50);
+    delay(50);                      // Brief hold for reliable detection
     Keyboard.press(KEY_LEFT_SHIFT);
-    delay(50);
+    delay(50);                      // Brief hold for reliable detection
     Keyboard.releaseAll();
-    delay(300);  // 모드 전환 완료 대기
+    delay(300);                     // Wait for OS to process mode change
     
     currentKeyboardMode = mode;
     lastModeChange = millis();
-    
-    Serial.printf("✅ %s 모드 활성화\n", modeStr.c_str());
 }
 
-// ===== 키보드 모드 문자열 반환 =====
+// Convert keyboard mode enum to string for debugging/status
 String getKeyboardModeString(KeyboardMode mode) {
     switch (mode) {
-        case MODE_ENGLISH: return "영문";
-        case MODE_KOREAN:  return "한글";
-        case MODE_UNKNOWN: return "알수없음";
-        default:           return "오류";
+        case MODE_ENGLISH: return "English";
+        case MODE_KOREAN:  return "Korean";
+        case MODE_UNKNOWN: return "Unknown";
+        default:           return "Error";
     }
 }
 
-// ===== 수신 데이터 처리 (프로토콜 기반) =====
+// Main data processing function - parses protocol and routes to appropriate handler
 void processReceivedData(const std::string& data) {
-    Serial.printf("\n🎯 데이터 수신: \"%s\"\n", data.c_str());
-    
     String dataStr = String(data.c_str());
     
-    // 프로토콜 분석
+    // Parse protocol prefix and route to appropriate processor
     if (dataStr.startsWith(PROTOCOL_ENGLISH)) {
-        // 영문 텍스트 처리
+        // Extract English text (everything after protocol prefix)
         String englishText = dataStr.substring(strlen(PROTOCOL_ENGLISH));
-        Serial.printf("🔤 영문 텍스트: \"%s\"\n", englishText.c_str());
         processEnglishText(englishText);
         
     } else if (dataStr.startsWith(PROTOCOL_KOREAN)) {
-        // 한글 자모 키 처리
+        // Extract Korean jamo key sequence
         String jamoKeys = dataStr.substring(strlen(PROTOCOL_KOREAN));
-        Serial.printf("🇰🇷 한글 자모: \"%s\"\n", jamoKeys.c_str());
         processKoreanJamo(jamoKeys);
         
     } else if (dataStr.startsWith(PROTOCOL_SPECIAL)) {
-        // 특수 명령 처리
+        // Extract special command
         String specialCmd = dataStr.substring(strlen(PROTOCOL_SPECIAL));
-        Serial.printf("🎹 특수 명령: \"%s\"\n", specialCmd.c_str());
         processSpecialCommand(specialCmd);
         
     } else if (dataStr.startsWith(PROTOCOL_CONFIG)) {
-        // 설정 처리
+        // Extract configuration JSON
         String configData = dataStr.substring(strlen(PROTOCOL_CONFIG));
-        Serial.printf("⚙️ 설정 변경: \"%s\"\n", configData.c_str());
         processConfiguration(configData);
         
     } else {
-        // 프로토콜 없으면 기본 영문으로 처리
-        Serial.printf("📝 기본 영문: \"%s\"\n", dataStr.c_str());
+        // No protocol prefix - treat as plain English text
         processEnglishText(dataStr);
     }
     
-    // 통계 업데이트
+    // Update message counter for statistics
     static uint32_t totalMessages = 0;
     totalMessages++;
-    Serial.printf("📊 총 처리 메시지: %d개\n", totalMessages);
 }
 
-// ===== 영문 텍스트 처리 =====
+// Process English text input with automatic mode switching
 void processEnglishText(const String& text) {
     if (!usbHidReady || text.length() == 0) {
-        Serial.printf("→ [시리얼 모드] %s\n", text.c_str());
-        return;
+        return;  // Skip if USB keyboard unavailable or empty text
     }
     
     try {
-        // 영문 모드 확인 및 전환
+        // Ensure keyboard is in English mode before typing
         ensureKeyboardMode(MODE_ENGLISH);
         
-        // 텍스트 입력
-        Serial.println("⌨️ 영문 텍스트 입력 중...");
+        // Type the text with natural timing
         typeWithSmartTiming(text);
         
-        Serial.printf("✅ 영문 입력 완료: \"%s\"\n", text.c_str());
-        
     } catch (...) {
-        Serial.println("❌ 영문 텍스트 입력 실패");
+        // Silent error handling - increment error counter for monitoring
+        errorCount++;
     }
 }
 
-// ===== 한글 자모 키 처리 =====
+// Process Korean jamo key sequence with automatic mode switching
 void processKoreanJamo(const String& jamoKeys) {
     if (!usbHidReady || jamoKeys.length() == 0) {
-        Serial.printf("→ [시리얼 모드] 한글: %s\n", jamoKeys.c_str());
-        return;
+        return;  // Skip if USB keyboard unavailable or empty sequence
     }
     
     try {
-        // 한글 모드 확인 및 전환
+        // Ensure keyboard is in Korean mode before typing jamo keys
         ensureKeyboardMode(MODE_KOREAN);
         
-        // 자모 키 입력
-        Serial.println("⌨️ 한글 자모 키 입력 중...");
+        // Type the jamo key sequence (Korean characters broken down to QWERTY keys)
         typeWithSmartTiming(jamoKeys);
         
-        Serial.printf("✅ 한글 입력 완료: 자모 \"%s\"\n", jamoKeys.c_str());
-        
     } catch (...) {
-        Serial.println("❌ 한글 자모 키 입력 실패");
+        // Silent error handling - increment error counter for monitoring
+        errorCount++;
     }
 }
 
-// ===== 특수 명령 처리 =====
+// Process special keyboard commands (enter, tab, ctrl+c, etc.)
 void processSpecialCommand(const String& command) {
     if (!usbHidReady) {
-        Serial.println("❌ USB HID 비활성화 - 특수 명령 사용 불가");
-        return;
+        return;  // Skip if USB keyboard not available
     }
     
     String cmd = command;
-    cmd.toLowerCase();
+    cmd.toLowerCase();  // Normalize to lowercase for comparison
     
-    Serial.printf("🎹 특수 명령 실행: %s\n", cmd.c_str());
-    
+    // Execute specific special commands
     if (cmd == "enter") {
         Keyboard.press(KEY_RETURN);
         Keyboard.releaseAll();
-        Serial.println("⌨️ Enter 키 전송");
     }
     else if (cmd == "tab") {
         Keyboard.press(KEY_TAB);
         Keyboard.releaseAll();
-        Serial.println("⌨️ Tab 키 전송");
     }
     else if (cmd == "backspace") {
         Keyboard.press(KEY_BACKSPACE);
         Keyboard.releaseAll();
-        Serial.println("⌨️ Backspace 키 전송");
     }
     else if (cmd == "space") {
         Keyboard.write(' ');
-        Serial.println("⌨️ Space 키 전송");
     }
     else if (cmd == "ctrl+c") {
         Keyboard.press(KEY_LEFT_CTRL);
         Keyboard.press('c');
         Keyboard.releaseAll();
-        Serial.println("⌨️ Ctrl+C 전송");
     }
     else if (cmd == "ctrl+v") {
         Keyboard.press(KEY_LEFT_CTRL);
         Keyboard.press('v');
         Keyboard.releaseAll();
-        Serial.println("⌨️ Ctrl+V 전송");
     }
     else if (cmd == "alt+tab") {
         Keyboard.press(KEY_LEFT_ALT);
         Keyboard.press(KEY_TAB);
         Keyboard.releaseAll();
-        Serial.println("⌨️ Alt+Tab 전송");
     }
     else if (cmd == "haneng") {
-        forceKeyboardMode(MODE_KOREAN);
+        forceKeyboardMode(MODE_KOREAN);  // Force switch to Korean mode
     }
     else if (cmd == "eng") {
-        forceKeyboardMode(MODE_ENGLISH);
+        forceKeyboardMode(MODE_ENGLISH); // Force switch to English mode
     }
     else if (cmd == "reset_mode") {
-        currentKeyboardMode = MODE_UNKNOWN;
-        Serial.println("🔄 키보드 모드 초기화");
+        currentKeyboardMode = MODE_UNKNOWN;  // Reset mode detection
     }
-    else {
-        Serial.printf("❓ 알 수 없는 특수 명령: %s\n", cmd.c_str());
-    }
+    // Unknown commands are silently ignored
     
-    delay(50);
+    delay(50);  // Brief delay for command processing
 }
 
-// ===== 설정 처리 (JSON 파싱) =====
+// Process configuration changes (JSON format from web interface)
 void processConfiguration(const String& config) {
-    // 간단한 JSON 파싱 (mode와 speed_cps만 추출)
-    // 예: {"mode":"typing","speed_cps":6}
+    // Simple JSON parsing for speed_cps field
+    // Expected format: {"mode":"typing","speed_cps":6}
     
     int speedIndex = config.indexOf("\"speed_cps\":");
     if (speedIndex != -1) {
-        // speed_cps 값 추출
-        int valueStart = speedIndex + 12; // "speed_cps": 길이
+        // Extract speed_cps value from JSON
+        int valueStart = speedIndex + 12; // Length of "speed_cps":
         int valueEnd = config.indexOf(',', valueStart);
         if (valueEnd == -1) valueEnd = config.indexOf('}', valueStart);
         
@@ -293,145 +258,101 @@ void processConfiguration(const String& config) {
             speedStr.trim();
             int newSpeed = speedStr.toInt();
             
+            // Validate speed range (1-20 characters per second)
             if (newSpeed >= 1 && newSpeed <= 20) {
                 updateTypingSpeed(newSpeed);
-            } else {
-                Serial.printf("❌ 잘못된 속도 값: %d (1-20 범위만 허용)\n", newSpeed);
             }
         }
     }
 }
 
-// ===== 타이핑 속도 업데이트 =====
+// Update typing speed and recalculate delays
 void updateTypingSpeed(uint8_t newSpeedCPS) {
     typingSpeedCPS = newSpeedCPS;
-    baseTypingDelay = 1000 / typingSpeedCPS;
+    baseTypingDelay = 1000 / typingSpeedCPS;  // Convert CPS to milliseconds delay
     
-    Serial.printf("⚡ 타이핑 속도 변경: %d chars/sec (기본 지연: %dms)\n", 
-                  typingSpeedCPS, baseTypingDelay);
-    
-    // BLE로 확인 메시지 전송
+    // Send confirmation back to web interface via BLE
     if (bleManager) {
         String response = String("Speed updated: ") + String(typingSpeedCPS) + " cps";
         bleManager->sendNotification(response.c_str());
     }
 }
 
-// ===== 스마트 타이핑 (자연스러운 속도) =====
+// Type text with natural human-like timing variations
 void typeWithSmartTiming(const String& text) {
-    Serial.printf("⌨️ 스마트 타이핑: \"%s\" (%d 문자, %d cps)\n", 
-                  text.c_str(), text.length(), typingSpeedCPS);
-    
-    // 랜덤 지연을 위한 범위 계산 (기본 지연의 30-50%)
+    // Calculate random timing variation (30% of base delay)
     uint32_t randomRange = baseTypingDelay / 3;
     
     for (int i = 0; i < text.length(); i++) {
         char c = text.charAt(i);
         
+        // Handle special characters with fixed delays
         if (c == '\n') {
             Keyboard.press(KEY_RETURN);
             Keyboard.releaseAll();
-            delay(100);  // 특수 키는 고정 지연
+            delay(100);  // Fixed delay for special keys
         } else if (c == '\t') {
             Keyboard.press(KEY_TAB);
             Keyboard.releaseAll();
-            delay(100);  // 특수 키는 고정 지연
+            delay(100);  // Fixed delay for special keys
         } else if (c >= 'A' && c <= 'Z') {
-            // Shift + 문자
+            // Handle uppercase letters with Shift modifier
             Keyboard.press(KEY_LEFT_SHIFT);
-            delay(20);
+            delay(20);   // Brief hold for shift detection
             Keyboard.press(c);
-            delay(30);
+            delay(30);   // Brief hold for key detection
             Keyboard.releaseAll();
-            // 속도에 맞춘 지연 + 랜덤
+            // Variable delay based on typing speed + randomization
             delay(baseTypingDelay + random(randomRange));
         } else {
+            // Regular character typing
             Keyboard.write(c);
-            // 속도에 맞춘 지연 + 랜덤
+            // Variable delay based on typing speed + randomization for natural feel
             delay(baseTypingDelay + random(randomRange));
         }
-        
-        // 긴 텍스트 진행률 표시
-        if (text.length() > 30 && i > 0 && i % 15 == 0) {
-            Serial.printf("📝 진행: %d/%d (%.1f%%) @ %d cps\n", 
-                          i, text.length(), 
-                          (float)i * 100.0 / text.length(),
-                          typingSpeedCPS);
-        }
     }
-    
-    Serial.printf("✅ 타이핑 완료 (%d문자 @ %d cps)\n", text.length(), typingSpeedCPS);
 }
 
-// ===== 시스템 초기화 =====
+// Initialize serial communication and display system info
 void initializeSystem() {
-    Serial.begin(115200);
-    safeDelay(1000);
-    
-    Serial.println("\n\n");
-    Serial.println("╔══════════════════════════════════════════════╗");
-    Serial.println("║        GHOSTYPE Professional v2.1             ║");
-    Serial.println("║       스마트 키보드 모드 전환                 ║");
-    Serial.println("║            T-Dongle-S3 Edition               ║");
-    Serial.println("╚══════════════════════════════════════════════╝");
-    
-    Serial.println("\n📊 시스템 정보:");
-    Serial.printf("   펌웨어: %s\n", PRODUCT_VERSION);
-    Serial.printf("   칩: ESP32-S3\n");
-    Serial.printf("   CPU: %d MHz\n", getCpuFrequencyMhz());
-    Serial.printf("   메모리: %d KB 사용 가능\n", ESP.getFreeHeap() / 1024);
-    
-    Serial.println("\n🔧 프로토콜 정보:");
-    Serial.println("   영문: " PROTOCOL_ENGLISH "[텍스트]");
-    Serial.println("   한글: " PROTOCOL_KOREAN "[자모키]");
-    Serial.println("   특수: " PROTOCOL_SPECIAL "[명령]");
-    Serial.println("   설정: " PROTOCOL_CONFIG "[JSON]");
-    Serial.println("   🎯 스마트 키보드 모드 자동 전환");
-    Serial.printf("   ⚡ 타이핑 속도: %d chars/sec\n", typingSpeedCPS);
+    // Initialize serial for debugging/status (will be removed in production)
+    // For now, keeping minimal initialization only
 }
 
-// ===== 하드웨어 초기화 =====
+// Initialize USB HID keyboard and GPIO hardware
 bool initializeHardware() {
-    Serial.println("\n🔧 하드웨어 초기화 중...");
-    
     try {
+        // Initialize RGB LED pin for status indication
         pinMode(RGB_LED_PIN, OUTPUT);
         digitalWrite(RGB_LED_PIN, LOW);
-        Serial.println("✅ RGB LED 핀 초기화 완료");
         
-        Serial.println("⌨️ USB HID 키보드 초기화 중...");
-        
+        // Initialize USB subsystem first
         USB.begin();
-        safeDelay(1000);
+        safeDelay(1000);  // Wait for USB enumeration
         
+        // Initialize HID keyboard interface
         Keyboard.begin();
-        safeDelay(500);
+        safeDelay(500);   // Wait for HID registration
         
-        Serial.println("💡 USB HID 키보드 테스트 중...");
-        safeDelay(1000);
-        
+        // Test keyboard functionality with space character
         Keyboard.write(' ');
         safeDelay(100);
         
         usbHidReady = true;
-        Serial.println("✅ USB HID 키보드 초기화 완료!");
-        Serial.println("🎯 스마트 키보드 모드 전환 준비");
-        Serial.println("⚠️ 메모장이나 텍스트 에디터를 열어두세요!");
         
-        // 초기 모드를 영문으로 설정
-        Serial.println("🔄 초기 키보드 모드를 영문으로 설정...");
+        // Set initial keyboard mode to English
         forceKeyboardMode(MODE_ENGLISH);
         
         return true;
         
     } catch (...) {
-        Serial.println("❌ USB HID 초기화 실패 - 시리얼 모드로 동작");
+        // USB HID initialization failed - device will operate in serial mode only
         usbHidReady = false;
-        return true;
+        return true;  // Continue anyway for BLE functionality
     }
 }
 
-// ===== 시리얼 명령 처리 =====
+// Handle serial commands for debugging and manual control
 void handleSerialCommands() {
     if (!Serial.available()) return;
     
@@ -441,29 +362,23 @@ void handleSerialCommands() {
     
     if (command.length() == 0) return;
     
-    Serial.printf("\n⌨️ 명령: %s\n", command.c_str());
-    
+    // Process various debug commands
     if (command == "status" || command == "s") {
+        // Print system status information
         if (bleManager) {
             bleManager->printStatus();
         }
-        Serial.printf("⌨️ USB HID: %s\n", usbHidReady ? "활성화" : "비활성화");
-        Serial.printf("🎯 현재 키보드 모드: %s\n", getKeyboardModeString(currentKeyboardMode).c_str());
-        Serial.printf("⚡ 타이핑 속도: %d chars/sec (지연: %dms)\n", typingSpeedCPS, baseTypingDelay);
-    }
-    else if (command == "help" || command == "h" || command == "?") {
-        printHelp();
     }
     else if (command == "test") {
+        // Test English typing functionality
         if (usbHidReady) {
-            Serial.println("⌨️ 영문 테스트 중...");
             processEnglishText("GHOSTYPE Test!");
         }
     }
     else if (command == "testko") {
+        // Test Korean typing functionality
         if (usbHidReady) {
-            Serial.println("🇰🇷 한글 테스트 중...");
-            // "안녕" = ㅇㅏㄴㄴㅕㅇ = dkssud
+            // "안녕" = ㅇㅏㄴㄴㅕㅇ = dkssud (jamo to QWERTY mapping)
             processKoreanJamo("dkssud");
         }
     }
@@ -473,185 +388,122 @@ void handleSerialCommands() {
     else if (command == "kor") {
         forceKeyboardMode(MODE_KOREAN);
     }
-    else if (command == "mode") {
-        Serial.printf("🎯 현재 키보드 모드: %s\n", getKeyboardModeString(currentKeyboardMode).c_str());
-    }
     else if (command == "reset" || command == "r") {
         resetSystem();
     }
     else if (command.startsWith("eng:")) {
+        // Direct English text input: "eng:Hello World"
         String text = command.substring(4);
         processEnglishText(text);
     }
     else if (command.startsWith("kor:")) {
+        // Direct Korean jamo input: "kor:dkssud"
         String jamo = command.substring(4);
         processKoreanJamo(jamo);
     }
     else if (command.startsWith("spe:")) {
+        // Direct special command: "spe:enter"
         String special = command.substring(4);
         processSpecialCommand(special);
     }
     else if (command.startsWith("speed:")) {
+        // Change typing speed: "speed:10"
         String speedStr = command.substring(6);
         int newSpeed = speedStr.toInt();
         if (newSpeed >= 1 && newSpeed <= 20) {
             updateTypingSpeed(newSpeed);
-        } else {
-            Serial.println("❌ 속도는 1-20 범위여야 합니다");
         }
     }
-    else {
-        Serial.println("❓ 알 수 없는 명령. 'help' 입력하여 도움말 확인");
-    }
+    // Unknown commands are silently ignored
 }
 
-// ===== 도움말 출력 =====
-void printHelp() {
-    Serial.println("\n📚 사용 가능한 명령:");
-    Serial.println("┌──────────────┬──────────────────────────────┐");
-    Serial.println("│ 명령         │ 설명                         │");
-    Serial.println("├──────────────┼──────────────────────────────┤");
-    Serial.println("│ status (s)   │ 상태 정보                    │");
-    Serial.println("│ test         │ 영문 키보드 테스트           │");
-    Serial.println("│ testko       │ 한글 키보드 테스트           │");
-    Serial.println("│ eng          │ 영문 모드로 강제 전환        │");
-    Serial.println("│ kor          │ 한글 모드로 강제 전환        │");
-    Serial.println("│ mode         │ 현재 키보드 모드 확인        │");
-    Serial.println("│ speed:[1-20] │ 타이핑 속도 변경 (cps)       │");
-    Serial.println("│ eng:[text]   │ 영문 텍스트 직접 입력        │");
-    Serial.println("│ kor:[jamo]   │ 한글 자모 키 직접 입력       │");
-    Serial.println("│ spe:[cmd]    │ 특수 명령 직접 실행          │");
-    Serial.println("│ reset (r)    │ 시스템 재시작                │");
-    Serial.println("│ help (h,?)   │ 이 도움말                    │");
-    Serial.println("└──────────────┴──────────────────────────────┘");
-    
-    Serial.println("\n💡 프로토콜 사용법:");
-    Serial.println("   🔤 영문: " PROTOCOL_ENGLISH "Hello World");
-    Serial.println("   🇰🇷 한글: " PROTOCOL_KOREAN "dkssud");
-    Serial.println("   🎹 특수: " PROTOCOL_SPECIAL "enter");
-    Serial.println("   ⚙️ 설정: " PROTOCOL_CONFIG "{\"mode\":\"typing\",\"speed_cps\":6}");
-    
-    Serial.println("\n🎯 특수 명령어:");
-    Serial.println("   enter, tab, backspace, space");
-    Serial.println("   ctrl+c, ctrl+v, alt+tab");
-    Serial.println("   haneng, eng, reset_mode");
-    
-    Serial.println("\n⚡ 타이핑 속도:");
-    Serial.println("   3 cps  = 느림 (Slow)");
-    Serial.println("   6 cps  = 보통 (Normal)");
-    Serial.println("   10 cps = 빠름 (Fast)");
-    
-    Serial.printf("\n📊 현재 상태:");
-    Serial.printf("   키보드 모드: %s\n", getKeyboardModeString(currentKeyboardMode).c_str());
-    Serial.printf("   타이핑 속도: %d chars/sec\n", typingSpeedCPS);
-}
-
-// ===== 시스템 재시작 =====
+// Perform system reset and restart ESP32
 void resetSystem() {
-    Serial.println("🔄 시스템 재시작 중...");
-    
+    // Clean shutdown of USB HID interface
     if (usbHidReady) {
         Keyboard.end();
     }
     
+    // Clean shutdown of BLE manager
     if (bleManager) {
         bleManager->stop();
         delete bleManager;
         bleManager = nullptr;
     }
     
-    safeDelay(1000);
-    ESP.restart();
+    safeDelay(1000);  // Allow clean shutdown
+    ESP.restart();    // Hardware restart
 }
 
-// ===== 메인 설정 =====
+// Main setup function - called once at startup
 void setup() {
+    Serial.begin(115200);  // Initialize serial for debugging
     initializeSystem();
     
+    // Initialize hardware components
     if (!initializeHardware()) {
-        Serial.println("❌ 하드웨어 초기화 실패!");
+        // Hardware initialization failed - halt system
         while (1) {
             safeDelay(1000);
         }
     }
     
-    safeDelay(2000);
+    safeDelay(2000);  // Allow hardware to stabilize
     
-    Serial.println("🚀 BLE 시스템 초기화 중...");
-    
+    // Initialize BLE communication system
     try {
         bleManager = new BLENimbleManager();
         
         if (bleManager && bleManager->begin()) {
-            systemReady = true;
-            Serial.println("✅ BLE 초기화 성공!");
-        } else {
-            Serial.println("❌ BLE 초기화 실패");
+            systemReady = true;  // System fully operational
         }
     } catch (...) {
-        Serial.println("❌ BLE 매니저 생성 중 예외 발생");
+        // BLE initialization failed - continue without BLE functionality
+        systemReady = false;
     }
     
-    if (systemReady) {
-        Serial.println("\n✅ 시스템 준비 완료!");
-        Serial.println("📱 사용 방법:");
-        if (bleManager) {
-            Serial.printf("1. '%s' 검색 및 연결\n", bleManager->getDeviceName().c_str());
-        }
-        Serial.println("2. 메모장 열어두기");
-        Serial.println("3. 웹에서 프로토콜 형식으로 전송:");
-        Serial.println("   - 영문: " PROTOCOL_ENGLISH "Hello");
-        Serial.println("   - 한글: " PROTOCOL_KOREAN "dkssud");
-        Serial.println("   - 특수: " PROTOCOL_SPECIAL "enter");
-        Serial.println("4. 자동 키보드 모드 전환으로 완벽 입력!");
-        Serial.println("════════════════════════════════════════\n");
-    }
-    
+    // Record startup timestamps
     lastStatusUpdate = millis();
     lastHeartbeat = millis();
 }
 
-// ===== 메인 루프 =====
+// Main loop function - called continuously
 void loop() {
+    // Process any incoming serial commands for debugging
     handleSerialCommands();
     
+    // Process BLE data if system is ready and connected
     if (systemReady && bleManager) {
         try {
+            // Check for incoming BLE data
             if (bleManager->hasReceivedData()) {
                 std::string receivedData = bleManager->getReceivedData();
                 if (!receivedData.empty()) {
-                    processReceivedData(receivedData);
+                    processReceivedData(receivedData);  // Parse and execute command
                 }
             }
         } catch (...) {
-            Serial.println("❌ BLE 데이터 처리 중 예외 발생");
+            // BLE error handling - increment error counter
             errorCount++;
             if (errorCount > 5) {
-                resetSystem();
+                resetSystem();  // Auto-recovery after too many errors
             }
         }
     }
     
+    // Periodic status updates (every 30 seconds) - minimal overhead
     if (millis() - lastStatusUpdate > 30000) {
         lastStatusUpdate = millis();
-        
-        if (systemReady && bleManager) {
-            if (bleManager->isAnyDeviceConnected()) {
-                Serial.printf("[연결됨] 💾 %dKB | 🎯 %s 모드\n", 
-                              ESP.getFreeHeap() / 1024,
-                              getKeyboardModeString(currentKeyboardMode).c_str());
-            } else {
-                Serial.printf("[대기중] 💾 %dKB | 📡 광고 중...\n", 
-                              ESP.getFreeHeap() / 1024);
-            }
-        }
+        // Status update logic here if needed for monitoring
     }
     
+    // LED heartbeat indicator (every 5 seconds)
     if (millis() - lastHeartbeat > 5000) {
         lastHeartbeat = millis();
-        digitalWrite(RGB_LED_PIN, !digitalRead(RGB_LED_PIN));
+        digitalWrite(RGB_LED_PIN, !digitalRead(RGB_LED_PIN));  // Toggle LED
     }
     
+    // Minimal delay and yield for task scheduling
     safeDelay(10);
     yield();
 }
