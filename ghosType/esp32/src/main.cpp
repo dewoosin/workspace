@@ -5,10 +5,11 @@
 #include "BLEConfig.h"
 #include "BLENimbleManager.h"
 
-// ESP32 system headers - conditional include
+// ESP32 system headers (Arduino framework compatible)
 #ifdef ESP32
-  #include <esp_system.h>
-  #include <esp_chip_info.h>
+  // Use Arduino ESP32 equivalents instead of ESP-IDF headers
+  // esp_system.h functions are available through Arduino.h
+  // esp_chip_info.h functions are available through ESP.h
 #endif
 
 // USB HID 키보드
@@ -315,7 +316,7 @@ void initializeSystem() {
     
     Serial.println("\n📊 시스템 정보:");
     Serial.printf("   펌웨어: %s\n", PRODUCT_VERSION);
-    Serial.printf("   칩: %s Rev.%d\n", ESP.getChipModel(), ESP.getChipRevision());
+    Serial.printf("   칩: ESP32-S3\n");
     Serial.printf("   CPU: %d MHz\n", getCpuFrequencyMhz());
     Serial.printf("   메모리: %d KB 사용 가능\n", ESP.getFreeHeap() / 1024);
     
