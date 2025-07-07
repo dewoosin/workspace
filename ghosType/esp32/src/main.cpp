@@ -1,28 +1,37 @@
-// Minimal test firmware for ESP32-S3
-// Test basic functionality without BLE
-
+// ESP32-S3 BLE Test Firmware
 #include <Arduino.h>
+#include <NimBLEDevice.h>
 
 void setup() {
-    // Initialize serial with delay
     Serial.begin(115200);
-    delay(2000); // Give time for serial connection
+    delay(2000);
     
     Serial.println();
     Serial.println("=================================");
-    Serial.println("ESP32-S3 Basic Test Starting...");
+    Serial.println("ESP32-S3 BLE Test Starting...");
     Serial.println("=================================");
-    Serial.flush();
     
-    // Test basic GPIO (LED)
-    Serial.println("Testing GPIO...");
-    pinMode(40, OUTPUT); // RGB_LED_PIN
+    // Initialize LED
+    pinMode(40, OUTPUT);
     digitalWrite(40, HIGH);
     delay(500);
     digitalWrite(40, LOW);
-    Serial.println("GPIO test complete");
     
-    Serial.println("Setup complete - entering main loop");
+    // Initialize BLE
+    Serial.println("Initializing BLE...");
+    NimBLEDevice::init("ESP32-S3-Test");
+    NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+    
+    // Start advertising
+    NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID("12345678-1234-1234-1234-123456789abc");
+    pAdvertising->setScanResponse(true);
+    pAdvertising->setMinPreferred(0x06);
+    pAdvertising->setMaxPreferred(0x12);
+    pAdvertising->start();
+    
+    Serial.println("BLE advertising started");
+    Serial.println("Setup complete");
     Serial.flush();
 }
 
