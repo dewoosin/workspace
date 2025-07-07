@@ -222,7 +222,7 @@ void updateTypingSpeed(uint8_t newSpeedCPS) {
     // Send confirmation via BLE
     if (bleManager) {
         String response = String("Speed updated: ") + String(typingSpeedCPS) + " cps";
-        bleManager->sendNotification(response.c_str());
+        bleManager->sendData(response.c_str());
     }
 }
 
