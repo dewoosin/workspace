@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHOSTYPE BLE 테스트 (한글 지원)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .status.disconnected { background: #fee; color: #c33; }
+        .status.connecting { background: #fff3cd; color: #856404; }
+        .status.connected { background: #d4edda; color: #155724; }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .message-area {
+            margin: 20px 0;
+        }
+
+        input[type="text"] {
+            width: 70%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1em;
+            margin-right: 10px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            padding: 12px 20px;
+            font-size: 0.9em;
+        }
+
+        .conversion-preview {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            text-align: left;
+            min-height: 60px;
+            transition: all 0.3s ease;
+        }
+
+        .conversion-preview.korean {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .conversion-preview.english {
+            border-color: #007bff;
+            background: #d1ecf1;
+        }
+
+        .conversion-preview.mixed {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .protocol-info {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .log-info { background: #d1ecf1; color: #0c5460; }
+        .log-success { background: #d4edda; color: #155724; }
+        .log-error { background: #f8d7da; color: #721c24; }
+        .log-data { background: #fff3cd; color: #856404; }
+
+        .test-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
+        .test-btn {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            border-radius: 20px;
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .test-btn:hover {
+            background: linear-gradient(45deg, #218838, #1ea383);
+        }
+
+        .korean-test-btn {
+            background: linear-gradient(45deg, #dc3545, #e83e8c);
+        }
+
+        .korean-test-btn:hover {
+            background: linear-gradient(45deg, #c82333, #d91a72);
+        }
+
+        .special-btn {
+            background: linear-gradient(45deg, #6f42c1, #e83e8c);
+        }
+
+        .special-btn:hover {
+            background: linear-gradient(45deg, #5a2d91, #d91a72);
+        }
+
+        .keyboard-test {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 1px solid #dee2e6;
+        }
+
+        .keyboard-test h4 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+
+        /* 카운트다운 모달 스타일 */
+        .countdown-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .countdown-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+            animation: modalSlide 0.3s ease-out;
+        }
+
+        @keyframes modalSlide {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .countdown-number {
+            font-size: 4em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+            text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .countdown-message {
+            font-size: 1.2em;
+            color: #333;
+            margin: 20px 0;
+        }
+
+        .countdown-preview {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            color: #495057;
+            word-break: break-all;
+            text-align: left;
+        }
+
+        .cancel-btn {
+            background: #dc3545;
+            margin-top: 20px;
+        }
+
+        .cancel-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .info-box h4 {
+            color: #004085;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+        }
+
+        .language-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .lang-korean {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .lang-english {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .lang-mixed {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .lang-special {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">👻 GHOSTYPE</div>
+        <div class="subtitle">BLE 키보드 웹 테스트 (한글 지원)</div>
+
+        <div id="status" class="status disconnected">
+            🔴 연결 안됨 - 연결 버튼을 클릭하세요
+        </div>
+
+        <div class="controls">
+            <button id="connectBtn" onclick="connectDevice()">🔗 연결</button>
+            <button id="disconnectBtn" onclick="disconnectDevice()" disabled>❌ 연결 해제</button>
+        </div>
+
+        <div class="message-area">
+            <input type="text" id="messageInput" placeholder="한글/영문 메시지를 입력하세요...">
+            <button class="send-btn" id="sendBtn" onclick="startCountdown()" disabled>📤 전송</button>
+        </div>
+
+        <!-- 변환 미리보기 -->
+        <div class="conversion-preview" id="conversionPreview">
+            <strong>🔄 변환 미리보기:</strong><br>
+            <span id="previewText">메시지를 입력하면 변환 결과가 여기에 표시됩니다</span>
+            <div class="protocol-info" id="protocolInfo"></div>
+        </div>
+
+        <!-- 키보드 테스트 영역 -->
+        <div class="keyboard-test" id="keyboardTest" style="display: none;">
+            <h4>⌨️ 키보드 테스트:</h4>
+            
+            <h5>🔤 영문 테스트:</h5>
+            <div class="test-buttons">
+                <button class="test-btn" onclick="testText('Hello World!')">Hello World!</button>
+                <button class="test-btn" onclick="testText('GHOSTYPE Test 123')">영문 테스트</button>
+                <button class="test-btn" onclick="testText('The quick brown fox')">타이핑 연습</button>
+                <button class="test-btn" onclick="testText('Programming is fun!')">프로그래밍</button>
+            </div>
+
+            <h5>🇰🇷 한글 테스트:</h5>
+            <div class="test-buttons">
+                <button class="korean-test-btn" onclick="testText('안녕하세요')">안녕하세요</button>
+                <button class="korean-test-btn" onclick="testText('테스트입니다')">테스트입니다</button>
+                <button class="korean-test-btn" onclick="testText('한글 키보드')">한글 키보드</button>
+                <button class="korean-test-btn" onclick="testText('프로그래밍')">프로그래밍</button>
+            </div>
+
+            <h5>🌐 혼합 테스트:</h5>
+            <div class="test-buttons">
+                <button class="test-btn" onclick="testText('Hello 안녕')">Hello 안녕</button>
+                <button class="test-btn" onclick="testText('GHOSTYPE 한글')">GHOSTYPE 한글</button>
+                <button class="test-btn" onclick="testText('Programming은 재미있어')">Programming은 재미있어</button>
+                <button class="test-btn" onclick="testText('오늘 날씨가 nice하네요')">오늘 날씨가 nice하네요</button>
+            </div>
+
+            <h5>🎹 특수 키:</h5>
+            <div class="test-buttons">
+                <button class="special-btn" onclick="testSpecial('enter')">Enter</button>
+                <button class="special-btn" onclick="testSpecial('tab')">Tab</button>
+                <button class="special-btn" onclick="testSpecial('space')">Space</button>
+                <button class="special-btn" onclick="testSpecial('backspace')">Backspace</button>
+                <button class="special-btn" onclick="testSpecial('ctrl+c')">Ctrl+C</button>
+                <button class="special-btn" onclick="testSpecial('ctrl+v')">Ctrl+V</button>
+            </div>
+        </div>
+
+        <!-- 카운트다운 모달 -->
+        <div id="countdownModal" class="countdown-modal" style="display: none;">
+            <div class="countdown-content">
+                <h3>⌨️ 키보드 입력 준비</h3>
+                <div class="countdown-number" id="countdownNumber">5</div>
+                <div class="countdown-message" id="countdownMessage">메모장에 커서를 놓고 기다리세요...</div>
+                <div class="countdown-preview" id="countdownPreview">
+                    <strong>원본:</strong> <span id="originalText"></span><br>
+                    <strong>변환:</strong> <span id="convertedText"></span><br>
+                    <strong>프로토콜:</strong> <span id="protocolText"></span>
+                </div>
+                <button class="cancel-btn" onclick="cancelCountdown()">❌ 취소</button>
+            </div>
+        </div>
+
+        <div class="log" id="log">
+            <div class="log-entry log-info">🌐 Web Bluetooth 준비됨 (한글 자모 변환 지원)</div>
+        </div>
+
+        <div class="info-box">
+            <h4>📋 사용 방법:</h4>
+            <ul>
+                <li><strong>Chrome/Edge 브라우저</strong>에서만 동작합니다</li>
+                <li>연결 버튼을 누르고 <strong>"GHOSTYPE-6FED"</strong> 선택</li>
+                <li><strong>한글/영문/혼합 텍스트</strong> 모두 지원됩니다</li>
+                <li>한글은 자동으로 <strong>자모 키 조합</strong>으로 변환됩니다</li>
+                <li>입력 전 <strong>5초 카운트다운</strong>으로 안전하게 전송</li>
+                <li>메모장을 열어두고 테스트해보세요!</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            💡 한글 지원: ㄱ-ㅎ, ㅏ-ㅣ 자모를 QWERTY 키로 자동 변환
+        </div>
+    </div>
+
+    <script>
+        // BLE 서비스 및 특성 UUID
+        const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+        const RX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+        const TX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+        let device = null;
+        let server = null;
+        let service = null;
+        let rxCharacteristic = null;
+        let txCharacteristic = null;
+        let countdownTimer = null;
+        let countdownPending = null;
+
+        // ===== 한글 → 자모 키 변환 로직 =====
+
+        // 두벌식 키보드 매핑 테이블
+        const QWERTY_TO_JAMO = {
+            // 자음 (왼손)
+            'q': 'ㅂ', 'w': 'ㅈ', 'e': 'ㄷ', 'r': 'ㄱ', 't': 'ㅅ',
+            'a': 'ㅁ', 's': 'ㄴ', 'd': 'ㅇ', 'f': 'ㄹ', 'g': 'ㅎ',
+            'z': 'ㅋ', 'x': 'ㅌ', 'c': 'ㅊ', 'v': 'ㅍ',
+            
+            // 모음 (오른손)
+            'y': 'ㅛ', 'u': 'ㅕ', 'i': 'ㅑ', 'o': 'ㅐ', 'p': 'ㅔ',
+            'h': 'ㅗ', 'j': 'ㅓ', 'k': 'ㅏ', 'l': 'ㅣ',
+            'b': 'ㅠ', 'n': 'ㅜ', 'm': 'ㅡ',
+            
+            // Shift 조합
+            'Q': 'ㅃ', 'W': 'ㅉ', 'E': 'ㄸ', 'R': 'ㄲ', 'T': 'ㅆ',
+            'O': 'ㅒ', 'P': 'ㅖ'
+        };
+
+        // 역방향 매핑 (자모 → QWERTY)
+        const JAMO_TO_QWERTY = {};
+        Object.keys(QWERTY_TO_JAMO).forEach(key => {
+            JAMO_TO_QWERTY[QWERTY_TO_JAMO[key]] = key;
+        });
+
+        // 한글 유니코드 분해 함수
+        function decomposeHangul(char) {
+            const code = char.charCodeAt(0);
+            
+            // 한글 완성형 범위 체크 (가-힣)
+            if (code < 0xAC00 || code > 0xD7A3) {
+                return null;
+            }
+            
+            const base = code - 0xAC00;
+            const cho = Math.floor(base / 588);           // 초성
+            const jung = Math.floor((base % 588) / 28);   // 중성
+            const jong = base % 28;                       // 종성
+            
+            // 자모 배열
+            const chosung = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+            const jungsung = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+            const jongsung = ['','ㄱ','ㄲ','ㄱㅅ','ㄴ','ㄴㅈ','ㄴㅎ','ㄷ','ㄹ','ㄹㄱ','ㄹㅁ','ㄹㅂ','ㄹㅅ','ㄹㅌ','ㄹㅍ','ㄹㅎ','ㅁ','ㅂ','ㅂㅅ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+            
+            const result = [];
+            result.push(chosung[cho]);
+            result.push(jungsung[jung]);
+            if (jong > 0) {
+                const jongChar = jongsung[jong];
+                if (jongChar.length === 2) {
+                    // 복합 종성 (예: ㄱㅅ)
+                    result.push(jongChar[0]);
+                    result.push(jongChar[1]);
+                } else {
+                    result.push(jongChar);
+                }
+            }
+            
+            return result;
+        }
+
+        // 자모를 QWERTY 키로 변환
+        function jamoToQwerty(jamo) {
+            return JAMO_TO_QWERTY[jamo] || jamo;
+        }
+
+        // 한글 텍스트를 자모 키 조합으로 변환
+        function convertHangulToJamoKeys(text) {
+            let result = '';
+            
+            for (let char of text) {
+                const jamos = decomposeHangul(char);
+                if (jamos) {
+                    // 한글인 경우 자모로 분해 후 QWERTY 키로 변환
+                    for (let jamo of jamos) {
+                        result += jamoToQwerty(jamo);
+                    }
+                } else {
+                    // 한글이 아닌 경우 그대로
+                    result += char;
+                }
+            }
+            
+            return result;
+        }
+
+        // 텍스트 타입 분석
+        function analyzeText(text) {
+            let hasKorean = false;
+            let hasEnglish = false;
+            let hasSpecial = false;
+            
+            for (let char of text) {
+                const code = char.charCodeAt(0);
+                if (code >= 0xAC00 && code <= 0xD7A3) {
+                    hasKorean = true;
+                } else if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+                    hasEnglish = true;
+                } else if (code >= 32 && code <= 126) {
+                    hasSpecial = true;
+                }
+            }
+            
+            if (hasKorean && hasEnglish) return 'mixed';
+            if (hasKorean) return 'korean';
+            if (hasEnglish || hasSpecial) return 'english';
+            return 'unknown';
+        }
+
+        // 스마트 텍스트 변환 (프로토콜 포함)
+        function convertTextWithProtocol(text) {
+            const type = analyzeText(text);
+            
+            if (type === 'korean' || type === 'mixed') {
+                // 한글이 포함된 경우: 자모 키로 변환 후 한글 프로토콜
+                const jamoKeys = convertHangulToJamoKeys(text);
+                return {
+                    original: text,
+                    converted: jamoKeys,
+                    protocol: `GHTYPE_KOR:${jamoKeys}`,
+                    type: type,
+                    description: '한글 자모 키 변환'
+                };
+            } else {
+                // 순수 영문인 경우: 영문 프로토콜
+                return {
+                    original: text,
+                    converted: text,
+                    protocol: `GHTYPE_ENG:${text}`,
+                    type: 'english',
+                    description: '영문 직접 입력'
+                };
+            }
+        }
+
+        // 실시간 변환 미리보기 업데이트
+        function updateConversionPreview() {
+            const input = document.getElementById('messageInput');
+            const preview = document.getElementById('conversionPreview');
+            const previewText = document.getElementById('previewText');
+            const protocolInfo = document.getElementById('protocolInfo');
+            const text = input.value;
+            
+            if (!text) {
+                preview.className = 'conversion-preview';
+                previewText.textContent = '메시지를 입력하면 변환 결과가 여기에 표시됩니다';
+                protocolInfo.textContent = '';
+                return;
+            }
+            
+            const result = convertTextWithProtocol(text);
+            
+            // 미리보기 스타일 업데이트
+            preview.className = `conversion-preview ${result.type}`;
+            
+            // 변환 결과 표시
+            if (result.type === 'korean' || result.type === 'mixed') {
+                previewText.innerHTML = `
+                    <strong>원본:</strong> ${result.original}<br>
+                    <strong>자모:</strong> ${result.converted}<br>
+                    <strong>설명:</strong> ${result.description}
+                `;
+            } else {
+                previewText.innerHTML = `
+                    <strong>텍스트:</strong> ${result.original}<br>
+                    <strong>설명:</strong> ${result.description}
+                `;
+            }
+            
+            protocolInfo.textContent = `전송 프로토콜: ${result.protocol}`;
+        }
+
+        // ===== BLE 통신 함수들 =====
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function updateUI(connected) {
+            document.getElementById('connectBtn').disabled = connected;
+            document.getElementById('disconnectBtn').disabled = !connected;
+            // 입력창은 항상 활성화 (미리보기를 위해)
+            // document.getElementById('messageInput').disabled = !connected;
+            document.getElementById('sendBtn').disabled = !connected;
+            
+            const keyboardTest = document.getElementById('keyboardTest');
+            
+            if (connected) {
+                keyboardTest.style.display = 'block';
+                addLog('🇰🇷 한글 자모 변환 기능 활성화', 'info');
+                addLog('⌨️ 모든 한글이 자동으로 자모 키로 변환됩니다', 'info');
+            } else {
+                keyboardTest.style.display = 'none';
+            }
+        }
+
+        // 카운트다운 시작
+        function startCountdown() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) {
+                addLog('⚠️ 메시지를 입력하세요', 'error');
+                return;
+            }
+
+            if (!rxCharacteristic) {
+                addLog('❌ 먼저 GHOSTYPE 디바이스에 연결하세요', 'error');
+                return;
+            }
+
+            const result = convertTextWithProtocol(message);
+            startCountdownWithResult(result, () => {
+                sendData(result.protocol);
+                input.value = '';
+                updateConversionPreview();
+            });
+        }
+
+        // 테스트 텍스트 전송
+        function testText(text) {
+            const result = convertTextWithProtocol(text);
+            startCountdownWithResult(result, () => {
+                sendData(result.protocol);
+            });
+        }
+
+        // 특수 키 전송
+        function testSpecial(command) {
+            const protocol = `GHTYPE_SPE:${command}`;
+            const result = {
+                original: command,
+                converted: command,
+                protocol: protocol,
+                type: 'special',
+                description: '특수 키 명령'
+            };
+            
+            startCountdownWithResult(result, () => {
+                sendData(protocol);
+            });
+        }
+
+        // 카운트다운 (변환 결과 포함)
+        function startCountdownWithResult(result, callback) {
+            if (!rxCharacteristic) {
+                addLog('❌ 연결되지 않음', 'error');
+                return;
+            }
+
+            const modal = document.getElementById('countdownModal');
+            const numberEl = document.getElementById('countdownNumber');
+            const messageEl = document.getElementById('countdownMessage');
+            const originalEl = document.getElementById('originalText');
+            const convertedEl = document.getElementById('convertedText');
+            const protocolEl = document.getElementById('protocolText');
+            
+            modal.style.display = 'flex';
+            originalEl.textContent = result.original;
+            convertedEl.textContent = result.converted;
+            protocolEl.textContent = result.protocol;
+            
+            let count = 5;
+            countdownPending = callback;
+            
+            function updateCountdown() {
+                numberEl.textContent = count;
+                
+                if (count > 0) {
+                    messageEl.textContent = `${count}초 후 입력이 시작됩니다...`;
+                    count--;
+                    countdownTimer = setTimeout(updateCountdown, 1000);
+                } else {
+                    messageEl.textContent = '입력 중... ⌨️';
+                    numberEl.textContent = '⌨️';
+                    numberEl.style.animation = 'none';
+                    
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        if (countdownPending) {
+                            countdownPending();
+                            countdownPending = null;
+                            addLog(`⌨️ 전송: ${result.description} - "${result.original}"`, 'success');
+                        }
+                        numberEl.style.animation = 'pulse 1s ease-in-out infinite';
+                    }, 1000);
+                }
+            }
+            
+            updateCountdown();
+            addLog(`⏰ 5초 카운트다운: ${result.description}`, 'info');
+        }
+
+        function cancelCountdown() {
+            if (countdownTimer) {
+                clearTimeout(countdownTimer);
+                countdownTimer = null;
+            }
+            countdownPending = null;
+            
+            const modal = document.getElementById('countdownModal');
+            modal.style.display = 'none';
+            
+            addLog('❌ 입력 취소됨', 'info');
+        }
+
+        // BLE 연결
+        async function connectDevice() {
+            try {
+                addLog('🔍 GHOSTYPE 디바이스 검색 중...', 'info');
+                updateStatus('🔍 디바이스 검색 중...', 'connecting');
+
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { namePrefix: 'GHOSTYPE' },
+                        { services: [SERVICE_UUID] }
+                    ],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                addLog(`📱 디바이스 발견: ${device.name}`, 'success');
+                device.addEventListener('gattserverdisconnected', onDisconnected);
+
+                addLog('🔗 GATT 서버 연결 중...', 'info');
+                server = await device.gatt.connect();
+
+                addLog('📡 Nordic UART 서비스 검색 중...', 'info');
+                service = await server.getPrimaryService(SERVICE_UUID);
+
+                addLog('🔧 특성 설정 중...', 'info');
+                rxCharacteristic = await service.getCharacteristic(RX_CHAR_UUID);
+                txCharacteristic = await service.getCharacteristic(TX_CHAR_UUID);
+
+                await txCharacteristic.startNotifications();
+                txCharacteristic.addEventListener('characteristicvaluechanged', onDataReceived);
+
+                addLog('🎉 연결 완료! 한글/영문 모두 지원됩니다', 'success');
+                updateStatus('🟢 연결됨 - 한글/영문 입력 가능', 'connected');
+                updateUI(true);
+
+                // 환영 메시지 (한글 테스트)
+                setTimeout(() => {
+                    testText('🌐 웹 브라우저에서 연결되었습니다!');
+                }, 1000);
+
+            } catch (error) {
+                addLog(`❌ 연결 실패: ${error.message}`, 'error');
+                updateStatus('🔴 연결 실패', 'disconnected');
+                console.error('Connection failed:', error);
+            }
+        }
+
+        function onDataReceived(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            addLog(`📨 ESP32 응답: "${value}"`, 'data');
+        }
+
+        function onDisconnected() {
+            addLog('👋 디바이스 연결 해제됨', 'info');
+            updateStatus('🔴 연결 해제됨', 'disconnected');
+            updateUI(false);
+            
+            device = null;
+            server = null;
+            service = null;
+            rxCharacteristic = null;
+            txCharacteristic = null;
+        }
+
+        async function disconnectDevice() {
+            if (device && device.gatt.connected) {
+                await device.gatt.disconnect();
+            }
+        }
+
+        async function sendData(message) {
+            if (!rxCharacteristic) {
+                addLog('❌ 연결되지 않음', 'error');
+                return false;
+            }
+
+            try {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(message);
+                
+                await rxCharacteristic.writeValue(data);
+                addLog(`📤 프로토콜 전송: "${message}"`, 'success');
+                return true;
+            } catch (error) {
+                addLog(`❌ 전송 실패: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // 이벤트 리스너
+        document.getElementById('messageInput').addEventListener('input', updateConversionPreview);
+        document.getElementById('messageInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                startCountdown();
+            }
+        });
+
+        // Web Bluetooth 지원 확인
+        if (!navigator.bluetooth) {
+            addLog('❌ 이 브라우저는 Web Bluetooth를 지원하지 않습니다', 'error');
+            updateStatus('🚫 Web Bluetooth 미지원', 'disconnected');
+        }
+
+        // 초기 상태
+        updateUI(false);
+        updateConversionPreview();
+        addLog('💡 연결 후 한글/영문을 자유롭게 입력해보세요!', 'info');
+    </script>
+</body>
+</html>
