@@ -4,8 +4,12 @@
 #include <Arduino.h>
 #include "BLEConfig.h"
 #include "BLENimbleManager.h"
-#include <esp_system.h>
-#include <esp_chip_info.h>
+
+// ESP32 system headers - conditional include
+#ifdef ESP32
+  #include <esp_system.h>
+  #include <esp_chip_info.h>
+#endif
 
 // USB HID 키보드
 #include <USB.h>
