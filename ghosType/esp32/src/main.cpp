@@ -41,12 +41,12 @@ enum KeyboardMode {
 KeyboardMode currentKeyboardMode = MODE_UNKNOWN;  // Current active keyboard mode
 unsigned long lastModeChange = 0;                 // Timestamp of last mode switch
 
-// Protocol definitions for parsing incoming BLE data
-const char* const PROTOCOL_PREFIX = "GHTYPE_";
-const char* const PROTOCOL_ENGLISH = "GHTYPE_ENG:";
-const char* const PROTOCOL_KOREAN = "GHTYPE_KOR:";
-const char* const PROTOCOL_SPECIAL = "GHTYPE_SPE:";
-const char* const PROTOCOL_CONFIG = "GHTYPE_CFG:";
+// BLE data protocol constants
+const char PROTOCOL_PREFIX[] = "GHTYPE_";
+const char PROTOCOL_ENGLISH[] = "GHTYPE_ENG:";
+const char PROTOCOL_KOREAN[] = "GHTYPE_KOR:";
+const char PROTOCOL_SPECIAL[] = "GHTYPE_SPE:";
+const char PROTOCOL_CONFIG[] = "GHTYPE_CFG:";
 
 // Function declarations
 void initializeSystem();
