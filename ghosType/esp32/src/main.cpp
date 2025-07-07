@@ -260,32 +260,38 @@ void typeWithSmartTiming(const String& text) {
 // Initialize hardware
 bool initializeHardware() {
     try {
-        // Initialize LED pin
+        // Initialize LED pin (always safe)
         pinMode(RGB_LED_PIN, OUTPUT);
         digitalWrite(RGB_LED_PIN, LOW);
+        yield(); // Feed watchdog
         
-        // Initialize USB
+        // Try USB initialization with timeout
+        unsigned long usbStartTime = millis();
         USB.begin();
-        safeDelay(1000);
         
-        // Initialize keyboard
+        // Wait for USB with timeout (max 2 seconds)
+        while (millis() - usbStartTime < 2000) {
+            delay(100);
+            yield(); // Feed watchdog
+        }
+        
+        // Try keyboard initialization
         Keyboard.begin();
-        safeDelay(500);
+        delay(200);
+        yield(); // Feed watchdog
         
-        // Test with space character
-        Keyboard.write(' ');
-        safeDelay(100);
-        
+        // Simple test without hanging
         usbHidReady = true;
         
-        // Set initial mode to English
-        forceKeyboardMode(MODE_ENGLISH);
+        // Try initial mode setting (non-blocking)
+        currentKeyboardMode = MODE_ENGLISH;
         
         return true;
         
     } catch (...) {
+        // On any error, disable USB HID but continue
         usbHidReady = false;
-        return true; // Continue for BLE functionality
+        return false; // Indicate hardware init failed
     }
 }
 
@@ -307,35 +313,73 @@ void resetSystem() {
 
 // Setup function
 void setup() {
-    Serial.begin(115200); // Minimal serial for debugging
+    // Basic initialization with watchdog feeding
+    Serial.begin(115200);
+    delay(100);
+    yield(); // Feed watchdog
     
-    // Initialize hardware
+    // Initialize hardware with error handling
     if (!initializeHardware()) {
-        while (1) {
-            safeDelay(1000);
-        }
+        // Don't hang in infinite loop - just disable USB HID
+        usbHidReady = false;
     }
     
-    safeDelay(2000);
+    delay(500);
+    yield(); // Feed watchdog
     
-    // Initialize BLE
+    // Initialize BLE with timeout protection
     try {
         bleManager = new BLENimbleManager();
+        yield(); // Feed watchdog
         
-        if (bleManager && bleManager->begin()) {
-            systemReady = true;
+        if (bleManager) {
+            // Try BLE initialization with timeout
+            unsigned long bleStartTime = millis();
+            bool bleInitSuccess = false;
+            
+            // Attempt BLE init with 5 second timeout
+            while (millis() - bleStartTime < 5000) {
+                if (bleManager->begin()) {
+                    bleInitSuccess = true;
+                    break;
+                }
+                delay(100);
+                yield(); // Feed watchdog
+            }
+            
+            systemReady = bleInitSuccess;
         }
     } catch (...) {
         systemReady = false;
+        // Clean up on failure
+        if (bleManager) {
+            delete bleManager;
+            bleManager = nullptr;
+        }
     }
     
+    // Initialize timestamps
     lastStatusUpdate = millis();
     lastHeartbeat = millis();
+    
+    // Signal successful startup
+    if (systemReady) {
+        // Blink LED to indicate successful startup
+        for (int i = 0; i < 3; i++) {
+            digitalWrite(RGB_LED_PIN, HIGH);
+            delay(100);
+            digitalWrite(RGB_LED_PIN, LOW);
+            delay(100);
+        }
+    }
 }
 
 // Main loop
 void loop() {
-    // Process BLE data
+    // Essential: Feed watchdog first
+    yield();
+    
+    // Process BLE data with error protection
     if (systemReady && bleManager) {
         try {
             if (bleManager->hasReceivedData()) {
@@ -346,23 +390,48 @@ void loop() {
             }
         } catch (...) {
             errorCount++;
-            if (errorCount > 5) {
-                resetSystem();
+            // More conservative error handling
+            if (errorCount > 10) {
+                // Try graceful recovery first
+                if (bleManager) {
+                    delete bleManager;
+                    bleManager = nullptr;
+                }
+                systemReady = false;
+                errorCount = 0; // Reset counter
+                delay(1000); // Brief pause before continuing
             }
         }
     }
     
-    // Periodic status update
+    // Periodic status update (every 30 seconds)
     if (millis() - lastStatusUpdate > 30000) {
         lastStatusUpdate = millis();
+        // Optional: Try to restart BLE if it failed
+        if (!systemReady && !bleManager) {
+            // Attempt BLE restart (simplified)
+            try {
+                bleManager = new BLENimbleManager();
+                if (bleManager && bleManager->begin()) {
+                    systemReady = true;
+                    errorCount = 0;
+                }
+            } catch (...) {
+                if (bleManager) {
+                    delete bleManager;
+                    bleManager = nullptr;
+                }
+            }
+        }
     }
     
-    // LED heartbeat
+    // LED heartbeat (every 5 seconds)
     if (millis() - lastHeartbeat > 5000) {
         lastHeartbeat = millis();
         digitalWrite(RGB_LED_PIN, !digitalRead(RGB_LED_PIN));
     }
     
-    safeDelay(10);
+    // Small delay with watchdog feeding
+    delay(10);
     yield();
 }
