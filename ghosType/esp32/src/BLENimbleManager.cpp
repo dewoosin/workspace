@@ -109,11 +109,9 @@ bool BLENimbleManager::begin() {
         // Set MTU more conservatively (improve connection success rate)
         NimBLEDevice::setMTU(247);  // 512 -> 247로 변경
         
-        // 보안 설정 (페어링 없이 연결 허용)
-        // Security settings (allow connection without pairing)
-        NimBLEDevice::setSecurityAuth(false, false, true);
-        NimBLEDevice::setSecurityPasskey(123456);
-        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+        // 보안 설정 제거 (기본값 사용)
+        // Remove security settings (use defaults)
+        // 기본 NimBLE 보안 설정 사용
         
         // 서버 생성 및 콜백 설정
         // Create server and set callbacks
