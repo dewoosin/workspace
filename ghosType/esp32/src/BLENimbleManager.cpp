@@ -99,9 +99,8 @@ bool BLENimbleManager::begin() {
         // Initialize BLE device
         NimBLEDevice::init(BLE_DEVICE_NAME);
         
-        // 연결 매개변수 설정 (더 관대한 설정)
-        // Set connection parameters (more permissive settings)
-        NimBLEDevice::setConnectionParams(12, 12, 0, 51); // interval: 15ms, timeout: 510ms
+        // 전력 설정 (연결 범위 향상)
+        // Set power level (improve connection range)
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
         
         // MTU 설정을 더 보수적으로 (연결 성공률 향상)
@@ -154,10 +153,10 @@ bool BLENimbleManager::begin() {
         pAdvertising->setMinInterval(100);  // 62.5ms
         pAdvertising->setMaxInterval(200);  // 125ms
         
-        // 연결 매개변수 권장값 설정
-        // Set recommended connection parameters
-        pAdvertising->setMinPreferred(0x06);  // 7.5ms
-        pAdvertising->setMaxPreferred(0x12);  // 22.5ms
+        // 연결 매개변수 권장값 설정 (광고에서)
+        // Set recommended connection parameters (in advertising)
+        pAdvertising->setMinPreferred(0x0C);  // 15ms (더 안정적)
+        pAdvertising->setMaxPreferred(0x18);  // 30ms (더 안정적)
         
         // 광고 시작
         // Start advertising
