@@ -19,6 +19,14 @@ bool HIDUtils::initialize() {
         return true;
     }
 
+    // USB HID 초기화 일시적으로 비활성화
+    // ESP32-S3 부트 루프 문제 해결을 위해
+    initialized = true;
+    hid_ready = false;  // HID 기능 비활성화
+    
+    return true;
+    
+    /* 원래 코드 - 부트 루프 해결 후 복원 필요
     // USB 서브시스템 초기화
     USB.begin();
     safeDelay(1000);  // USB 열거 대기
@@ -32,6 +40,7 @@ bool HIDUtils::initialize() {
     hid_ready = true;
 
     return true;
+    */
 }
 
 void HIDUtils::deinitialize() {

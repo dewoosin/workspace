@@ -178,6 +178,35 @@ pAdvertising->start();
 
 ---
 
+### 18:30 - 치명적 부트 루프 발생
+**문제**: 프로덕션 코드 업로드 후 ESP32가 무한 리셋 루프에 빠짐
+**증상**:
+```
+rst:0x3 (RTC_SW_SYS_RST),boot:0x8 (SPI_FAST_FLASH_BOOT)
+Saved PC:0x403cdb0a
+```
+- 위 메시지가 초당 수십 번 반복
+- BLE 검색 불가 (부팅조차 못함)
+
+**원인 분석**:
+1. USB HID와 BLE 동시 사용 충돌 의심
+2. USB 모드 설정 오류 가능성
+3. 메모리 부족 또는 스택 오버플로우
+
+**긴급 수정사항**:
+1. platformio.ini USB 설정 변경:
+   - ARDUINO_USB_MODE=1 → 0
+   - ARDUINO_USB_CDC_ON_BOOT=0 → 1
+2. HID 초기화 비활성화:
+   - USB.begin() 주석 처리
+   - keyboard.begin() 주석 처리
+   - hid_ready = false로 설정
+
+**결과**: 테스트 필요
+**상태**: 부트 루프 해결 시도 중
+
+---
+
 ## 현재 상태 요약
 
 ### 확인된 문제들
