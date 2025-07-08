@@ -23,6 +23,9 @@ const char* testTexts[] = {
 };
 int textIndex = 0;
 
+// 함수 선언
+void typeText(const char* text);
+
 void setup() {
     Serial.begin(115200);
     
