@@ -35,6 +35,35 @@ class MyServerCallbacks: public BLEServerCallbacks {
     }
 };
 
+// 데이터 수신 콜백 클래스
+class MyCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+        std::string rxValue = pCharacteristic->getValue();
+
+        if (rxValue.length() > 0) {
+            Serial.println("📨 **** 웹에서 데이터 수신! ****");
+            Serial.print("📥 받은 데이터: ");
+            for (int i = 0; i < rxValue.length(); i++) {
+                Serial.print(rxValue[i]);
+            }
+            Serial.println();
+            Serial.print("📏 데이터 길이: ");
+            Serial.println(rxValue.length());
+            
+            // 수신 확인 응답 전송
+            if (pTxCharacteristic && deviceConnected) {
+                String response = "OK:Received " + String(rxValue.length()) + " chars";
+                pTxCharacteristic->setValue(response.c_str());
+                pTxCharacteristic->notify();
+                Serial.println("📤 응답 전송: " + response);
+            }
+            
+            // TODO: 여기에 타이핑 로직 추가
+            Serial.println("⌨️ 타이핑 시뮬레이션 (HID 미구현)");
+        }
+    }
+};
+
 void setup() {
     Serial.begin(115200);
     delay(2000);
@@ -80,6 +109,9 @@ void setup() {
                         RX_CHAR_UUID,
                         BLECharacteristic::PROPERTY_WRITE
                       );
+    
+    // 데이터 수신 콜백 설정
+    pRxCharacteristic->setCallbacks(new MyCallbacks());
     Serial.println("   ✓ RX 특성 생성 완료");
     
     // TX 특성 생성 (ESP32 → 웹)
