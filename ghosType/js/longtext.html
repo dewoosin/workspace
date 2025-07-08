@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHOSTYPE - Long Text Mode</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background: #dc3545;
+        }
+        
+        .status.connected .status-indicator {
+            background: #28a745;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        
+        .text-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .progress-container {
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #28a745;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .chunk-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .chunk-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        
+        .chunk-item.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .chunk-item.current {
+            background: #cce5ff;
+            color: #004085;
+        }
+        
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>GHOSTYPE - 긴 텍스트 모드 📄</h1>
+    
+    <div class="container">
+        <!-- Connection Panel -->
+        <div class="panel full-width">
+            <div class="status" id="status">
+                <div class="status-indicator"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+            
+            <div class="controls">
+                <button id="connectBtn" class="btn-primary">Connect to GHOSTYPE</button>
+                <button id="disconnectBtn" class="btn-secondary" disabled>Disconnect</button>
+            </div>
+        </div>
+        
+        <!-- Text Input Panel -->
+        <div class="panel">
+            <h2>텍스트 입력</h2>
+            
+            <div class="input-group">
+                <textarea id="textInput" placeholder="긴 텍스트를 입력하세요. 한글과 영어를 자유롭게 섞어서 사용할 수 있습니다..."></textarea>
+                <div class="text-info">
+                    <span>글자수: <strong id="charCount">0</strong></span>
+                    <span>예상 청크: <strong id="chunkCount">0</strong></span>
+                    <span>예상 시간: <strong id="estimatedTime">0초</strong></span>
+                </div>
+            </div>
+            
+            <div class="options">
+                <div class="option-group">
+                    <label>타이핑 속도:</label>
+                    <input type="number" id="speedInput" min="1" max="50" value="10">
+                    <span>CPS</span>
+                </div>
+                <div class="option-group">
+                    <label>청크 크기:</label>
+                    <input type="number" id="chunkSizeInput" min="50" max="500" value="100">
+                    <span>글자</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="sendBtn" class="btn-primary" disabled>전송 시작</button>
+                <button id="pauseBtn" class="btn-secondary" disabled>일시정지</button>
+                <button id="stopBtn" class="btn-danger" disabled>중단</button>
+            </div>
+        </div>
+        
+        <!-- Progress Panel -->
+        <div class="panel">
+            <h2>진행 상황</h2>
+            
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar" style="width: 0%">
+                        0%
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="sentChars">0</div>
+                    <div class="stat-label">전송됨</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="typedChars">0</div>
+                    <div class="stat-label">타이핑됨</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="remainingChars">0</div>
+                    <div class="stat-label">남음</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="elapsedTime">0:00</div>
+                    <div class="stat-label">경과 시간</div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 20px;">청크 상태</h3>
+            <div class="chunk-list" id="chunkList"></div>
+        </div>
+        
+        <!-- Warning -->
+        <div class="panel full-width">
+            <div class="warning">
+                <strong>⚠️ 주의사항:</strong>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li>긴 텍스트는 여러 청크로 나누어 전송됩니다</li>
+                    <li>각 청크는 최대 500자까지 설정 가능합니다</li>
+                    <li>전송 중에는 ESP32와의 연결을 유지해야 합니다</li>
+                    <li>타이핑 속도가 너무 빠르면 일부 문자가 누락될 수 있습니다</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="hangulPreprocessor.js"></script>
+    <script src="webBLEInterface.js"></script>
+    <script src="longTextHandler.js"></script>
+    <script>
+        // Initialize
+        let ble = null;
+        let longTextHandler = null;
+        let startTime = null;
+        let updateTimer = null;
+        
+        // DOM elements
+        const statusEl = document.getElementById('status');
+        const statusTextEl = document.getElementById('statusText');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const textInput = document.getElementById('textInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const charCount = document.getElementById('charCount');
+        const chunkCount = document.getElementById('chunkCount');
+        const estimatedTime = document.getElementById('estimatedTime');
+        const speedInput = document.getElementById('speedInput');
+        const chunkSizeInput = document.getElementById('chunkSizeInput');
+        const progressBar = document.getElementById('progressBar');
+        const sentChars = document.getElementById('sentChars');
+        const typedChars = document.getElementById('typedChars');
+        const remainingChars = document.getElementById('remainingChars');
+        const elapsedTime = document.getElementById('elapsedTime');
+        const chunkList = document.getElementById('chunkList');
+        
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            ble = new WebBLEInterface();
+            longTextHandler = new LongTextHandler(ble);
+            
+            // Set callbacks
+            longTextHandler.onProgress = updateProgress;
+            longTextHandler.onComplete = onComplete;
+            longTextHandler.onError = onError;
+        });
+        
+        // Connect button
+        connectBtn.addEventListener('click', async () => {
+            try {
+                await ble.connect();
+                statusEl.classList.add('connected');
+                statusTextEl.textContent = 'Connected to GHOSTYPE';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                sendBtn.disabled = false;
+            } catch (error) {
+                alert('연결 실패: ' + error.message);
+            }
+        });
+        
+        // Disconnect button
+        disconnectBtn.addEventListener('click', () => {
+            ble.disconnect();
+            statusEl.classList.remove('connected');
+            statusTextEl.textContent = 'Disconnected';
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            sendBtn.disabled = true;
+        });
+        
+        // Text input handler
+        textInput.addEventListener('input', () => {
+            const text = textInput.value;
+            const length = text.length;
+            const chunks = Math.ceil(length / parseInt(chunkSizeInput.value));
+            const time = longTextHandler.estimateTime(length, parseInt(speedInput.value));
+            
+            charCount.textContent = length.toLocaleString();
+            chunkCount.textContent = chunks;
+            estimatedTime.textContent = time.formatted;
+        });
+        
+        // Send button
+        sendBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('텍스트를 입력하세요');
+                return;
+            }
+            
+            // Update chunk size
+            longTextHandler.CHUNK_SIZE = parseInt(chunkSizeInput.value);
+            
+            // Start transmission
+            sendBtn.disabled = true;
+            pauseBtn.disabled = false;
+            stopBtn.disabled = false;
+            textInput.disabled = true;
+            
+            startTime = Date.now();
+            updateTimer = setInterval(updateElapsedTime, 1000);
+            
+            try {
+                await longTextHandler.sendLongText(text, {
+                    speed_cps: parseInt(speedInput.value)
+                });
+            } catch (error) {
+                alert('전송 오류: ' + error.message);
+                resetUI();
+            }
+        });
+        
+        // Stop button
+        stopBtn.addEventListener('click', () => {
+            longTextHandler.abort();
+            resetUI();
+        });
+        
+        // Progress update callback
+        function updateProgress(progress) {
+            const percentage = progress.percentage || 0;
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+            
+            sentChars.textContent = progress.sent.toLocaleString();
+            typedChars.textContent = progress.typed.toLocaleString();
+            remainingChars.textContent = (progress.total - progress.typed).toLocaleString();
+        }
+        
+        // Complete callback
+        function onComplete(progress) {
+            alert(`전송 완료! 총 ${progress.total.toLocaleString()}자 타이핑됨`);
+            resetUI();
+        }
+        
+        // Error callback
+        function onError(error) {
+            alert('오류 발생: ' + error.message);
+            resetUI();
+        }
+        
+        // Update elapsed time
+        function updateElapsedTime() {
+            if (!startTime) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            elapsedTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Reset UI
+        function resetUI() {
+            sendBtn.disabled = false;
+            pauseBtn.disabled = true;
+            stopBtn.disabled = true;
+            textInput.disabled = false;
+            
+            if (updateTimer) {
+                clearInterval(updateTimer);
+                updateTimer = null;
+            }
+            startTime = null;
+        }
+    </script>
+</body>
+</html>
