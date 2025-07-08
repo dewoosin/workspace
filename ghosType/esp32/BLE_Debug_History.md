@@ -202,8 +202,35 @@ Saved PC:0x403cdb0a
    - keyboard.begin() 주석 처리
    - hid_ready = false로 설정
 
-**결과**: 테스트 필요
-**상태**: 부트 루프 해결 시도 중
+**결과**: 여전히 BLE 검색 안됨, 연결 시 무한 루프
+**상태**: 문제 지속
+
+---
+
+### 19:00 - 최소 코드로 롤백 테스트
+**접근법**: 모든 복잡한 코드 제거하고 가장 기본적인 BLE만 테스트
+**변경사항**:
+1. 모든 모듈 파일 비활성화 (.disabled 확장자 추가)
+2. 가장 단순한 BLE 광고 코드만 사용:
+```cpp
+void setup() {
+    delay(1000);
+    NimBLEDevice::init("GHOSTYPE");
+    NimBLEServer* pServer = NimBLEDevice::createServer();
+    NimBLEService* pService = pServer->createService("12345678-1234-5678-9012-123456789abc");
+    pService->start();
+    NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID("12345678-1234-5678-9012-123456789abc");
+    pAdvertising->start();
+}
+```
+
+**목적**: 
+- 복잡한 코드가 문제인지 확인
+- 이전에 작동했던 최소 설정으로 테스트
+- HID, Parser, BLE Manager 등 모든 복잡성 제거
+
+**상태**: 테스트 준비 완료
 
 ---
 
