@@ -45,6 +45,11 @@ void setup() {
     // BLE 초기화
     Serial.println("1. BLE 초기화 시작...");
     BLEDevice::init("GHOSTYPE-S3");
+    
+    // Web Bluetooth 호환을 위한 보안 설정
+    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_NO_MITM);
+    BLEDevice::setSecurityCallbacks(new BLESecurityCallbacks());
+    
     Serial.println("   ✓ BLE 장치 초기화 완료");
     
     // 서버 생성
@@ -58,7 +63,7 @@ void setup() {
     BLEService *pService = pServer->createService(SERVICE_UUID);
     Serial.println("   ✓ BLE 서비스 생성 완료");
     
-    // 특성 생성
+    // 특성 생성 (Web Bluetooth 호환)
     Serial.println("4. BLE 특성 생성...");
     pCharacteristic = pService->createCharacteristic(
                         CHARACTERISTIC_UUID,
@@ -66,6 +71,9 @@ void setup() {
                         BLECharacteristic::PROPERTY_WRITE |
                         BLECharacteristic::PROPERTY_NOTIFY
                       );
+    
+    // Web Bluetooth 호환을 위한 Descriptor 추가
+    pCharacteristic->addDescriptor(new BLE2902());
     Serial.println("   ✓ BLE 특성 생성 완료");
     
     // 서비스 시작
