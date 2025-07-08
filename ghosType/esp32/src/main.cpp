@@ -28,17 +28,28 @@ class MyServerCallbacks: public BLEServerCallbacks {
 void setup() {
     // 시리얼 초기화
     Serial.begin(115200);
-    delay(2000);
     
-    Serial.println("=== T-Dongle-S3 BLE Test ===");
-    Serial.println("LCD 없이 BLE 기능만 테스트합니다");
+    // 시리얼 준비 대기
+    unsigned long startTime = millis();
+    while (!Serial && millis() - startTime < 5000) {
+        delay(100);
+    }
+    
+    Serial.println("\n\n=== T-Dongle-S3 BLE Test ===");
+    Serial.println("Starting up...");
+    Serial.print("ESP32 Chip ID: ");
+    Serial.println(ESP.getEfuseMac(), HEX);
     
     // 버튼 설정
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    Serial.println("Button initialized");
     
     // BLE 초기화
     Serial.println("Initializing BLE...");
-    BLEDevice::init("GHOSTYPE-S3");
+    
+    try {
+        BLEDevice::init("GHOSTYPE-S3");
+        Serial.println("BLE Device initialized");
     
     // BLE 서버 생성
     pServer = BLEDevice::createServer();
@@ -59,17 +70,26 @@ void setup() {
     
     // 서비스 시작
     pService->start();
+    Serial.println("Service started");
     
     // 광고 시작
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
     pAdvertising->setScanResponse(true);
-    pAdvertising->setMinPreferred(0x06);
-    pAdvertising->setMinPreferred(0x12);
-    BLEDevice::startAdvertising();
+    Serial.println("Advertising configured");
     
-    Serial.println("BLE Ready! Device name: GHOSTYPE-S3");
+    bool advStarted = BLEDevice::startAdvertising();
+    Serial.print("Advertising started: ");
+    Serial.println(advStarted ? "SUCCESS" : "FAILED");
+    
+    Serial.println("\n=== BLE Ready! ===");
+    Serial.println("Device name: GHOSTYPE-S3");
     Serial.println("Waiting for client connection...");
+    Serial.println("Press button to test");
+    
+    } catch(...) {
+        Serial.println("ERROR: BLE initialization failed!");
+    }
 }
 
 void loop() {
