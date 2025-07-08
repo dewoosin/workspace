@@ -47,9 +47,10 @@ class WebBLEInterface {
             console.log('📱 BLE 장치 요청...');
             this.device = await navigator.bluetooth.requestDevice({
                 filters: [
+                    { name: 'ESP32' },        // 간단한 테스트 펌웨어용
+                    { namePrefix: 'ESP32' },  // ESP32 기본 이름
                     { name: 'GHOSTYPE' },
-                    { namePrefix: 'GHOST' },  // 이름이 잘린 경우 대비
-                    { namePrefix: 'ESP32' }   // ESP32 기본 이름
+                    { namePrefix: 'GHOST' }   // 백업용
                 ],
                 optionalServices: [this.SERVICE_UUID],
                 acceptAllDevices: false
