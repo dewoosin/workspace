@@ -7,11 +7,13 @@
 #define BUTTON_PIN 0
 
 BLEServer* pServer = NULL;
-BLECharacteristic* pCharacteristic = NULL;
+BLECharacteristic* pRxCharacteristic = NULL;  // 수신용
+BLECharacteristic* pTxCharacteristic = NULL;  // 송신용
 bool deviceConnected = false;
 
-#define SERVICE_UUID        "12345678-1234-5678-9012-123456789abc"
-#define CHARACTERISTIC_UUID "87654321-4321-8765-2109-cba987654321"
+#define SERVICE_UUID        "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+#define RX_CHAR_UUID        "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+#define TX_CHAR_UUID        "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
 
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
@@ -46,9 +48,8 @@ void setup() {
     Serial.println("1. BLE 초기화 시작...");
     BLEDevice::init("GHOSTYPE-S3");
     
-    // Web Bluetooth 호환을 위한 보안 설정
+    // Web Bluetooth 호환을 위한 기본 보안 설정
     BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_NO_MITM);
-    BLEDevice::setSecurityCallbacks(new BLESecurityCallbacks());
     
     Serial.println("   ✓ BLE 장치 초기화 완료");
     
@@ -63,26 +64,33 @@ void setup() {
     BLEService *pService = pServer->createService(SERVICE_UUID);
     Serial.println("   ✓ BLE 서비스 생성 완료");
     
-    // 특성 생성 (Web Bluetooth 호환)
-    Serial.println("4. BLE 특성 생성...");
-    pCharacteristic = pService->createCharacteristic(
-                        CHARACTERISTIC_UUID,
+    // RX 특성 생성 (웹 → ESP32)
+    Serial.println("4. RX 특성 생성...");
+    pRxCharacteristic = pService->createCharacteristic(
+                        RX_CHAR_UUID,
+                        BLECharacteristic::PROPERTY_WRITE
+                      );
+    Serial.println("   ✓ RX 특성 생성 완료");
+    
+    // TX 특성 생성 (ESP32 → 웹)
+    Serial.println("5. TX 특성 생성...");
+    pTxCharacteristic = pService->createCharacteristic(
+                        TX_CHAR_UUID,
                         BLECharacteristic::PROPERTY_READ |
-                        BLECharacteristic::PROPERTY_WRITE |
                         BLECharacteristic::PROPERTY_NOTIFY
                       );
     
     // Web Bluetooth 호환을 위한 Descriptor 추가
-    pCharacteristic->addDescriptor(new BLE2902());
-    Serial.println("   ✓ BLE 특성 생성 완료");
+    pTxCharacteristic->addDescriptor(new BLE2902());
+    Serial.println("   ✓ TX 특성 생성 완료");
     
     // 서비스 시작
-    Serial.println("5. BLE 서비스 시작...");
+    Serial.println("6. BLE 서비스 시작...");
     pService->start();
     Serial.println("   ✓ BLE 서비스 시작 완료");
     
     // 광고 시작
-    Serial.println("6. BLE 광고 시작...");
+    Serial.println("7. BLE 광고 시작...");
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
     pAdvertising->setScanResponse(true);
@@ -121,10 +129,10 @@ void loop() {
         Serial.println(buttonCount);
         
         // BLE로 데이터 전송
-        if (deviceConnected) {
+        if (deviceConnected && pTxCharacteristic) {
             String msg = "Button count: " + String(buttonCount);
-            pCharacteristic->setValue(msg.c_str());
-            pCharacteristic->notify();
+            pTxCharacteristic->setValue(msg.c_str());
+            pTxCharacteristic->notify();
             Serial.println("   📤 BLE로 데이터 전송됨");
         }
         
