@@ -3,6 +3,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <esp_gap_ble_api.h>
 
 #define BUTTON_PIN 0
 
@@ -48,8 +49,17 @@ void setup() {
     Serial.println("1. BLE 초기화 시작...");
     BLEDevice::init("GHOSTYPE-S3");
     
-    // Web Bluetooth 호환을 위한 기본 보안 설정
-    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_NO_MITM);
+    // 보안 완전 비활성화 (Web Bluetooth 호환)
+    esp_ble_auth_req_t auth_req = ESP_LE_AUTH_NO_BOND;
+    esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;
+    uint8_t key_size = 16;
+    uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+    esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
     
     Serial.println("   ✓ BLE 장치 초기화 완료");
     
