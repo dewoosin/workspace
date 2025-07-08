@@ -8,6 +8,7 @@
  */
 
 #include "ble_manager.h"
+#include "hid_utils.h"
 
 // 정적 멤버 변수 초기화
 NimBLEServer* BLEManager::ble_server = nullptr;

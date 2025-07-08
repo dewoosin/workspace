@@ -47,7 +47,8 @@ void HIDUtils::deinitialize() {
     keyboard.end();
     
     // USB 서브시스템 종료
-    USB.end();
+    // ESP32-S3에서는 USB.end()가 지원되지 않음
+    // USB는 시스템 레벨에서 관리되므로 별도 종료 불필요
     
     // 상태 리셋
     initialized = false;
