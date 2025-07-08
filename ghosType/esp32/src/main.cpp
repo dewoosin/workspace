@@ -108,19 +108,20 @@ void processTypingCommand(std::string command) {
 
 // 실제 타이핑 실행 함수
 void typeText(std::string text) {
-    Serial.println("⌨️ HID 키보드로 타이핑 시작!");
+    Serial.println("⌨️ 타이핑 시뮬레이션 (HID 비활성화)");
+    Serial.print("📝 타이핑할 텍스트: ");
     
-    // 문자 하나씩 타이핑
+    // 시뮬레이션 - 시리얼로만 출력
     for (char c : text) {
         if (c != '\0') {
-            keyboard.write(c);
-            delay(100);  // 타이핑 속도 조절
+            // keyboard.write(c);  // HID 비활성화
             Serial.print(c);
+            delay(50);  // 시각적 효과
         }
     }
     
     Serial.println();
-    Serial.println("✅ 타이핑 완료!");
+    Serial.println("✅ 타이핑 시뮬레이션 완료!");
 }
 
 void setup() {
@@ -133,11 +134,11 @@ void setup() {
     
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     
-    // USB HID 초기화
-    Serial.println("0. USB HID 키보드 초기화...");
-    USB.begin();
-    keyboard.begin();
-    Serial.println("   ✓ USB HID 키보드 초기화 완료");
+    // USB HID 초기화 - T-Dongle-S3에서 BLE와 충돌 가능
+    // Serial.println("0. USB HID 키보드 초기화...");
+    // USB.begin();
+    // keyboard.begin();
+    // Serial.println("   ✓ USB HID 키보드 초기화 완료");
     
     // BLE 초기화
     Serial.println("1. BLE 초기화 시작...");
