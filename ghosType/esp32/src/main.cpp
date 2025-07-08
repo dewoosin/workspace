@@ -16,12 +16,19 @@ bool deviceConnected = false;
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
         deviceConnected = true;
-        Serial.println("*** BLE DEVICE CONNECTED! ***");
+        Serial.println("🔗 *** BLE DEVICE CONNECTED! ***");
+        Serial.println("🎉 연결 성공! 클라이언트가 연결되었습니다!");
     };
 
     void onDisconnect(BLEServer* pServer) {
         deviceConnected = false;
-        Serial.println("*** BLE DEVICE DISCONNECTED ***");
+        Serial.println("❌ *** BLE DEVICE DISCONNECTED ***");
+        Serial.println("📱 클라이언트 연결이 해제되었습니다");
+        
+        // 광고 재시작
+        delay(500);
+        pServer->getAdvertising()->start();
+        Serial.println("🔄 광고 재시작됨 - 다시 연결 가능");
     }
 };
 
@@ -70,8 +77,9 @@ void setup() {
     Serial.println("6. BLE 광고 시작...");
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
-    pAdvertising->setScanResponse(false);
-    pAdvertising->setMinPreferred(0x0);
+    pAdvertising->setScanResponse(true);
+    pAdvertising->setMinPreferred(0x06);  // 연결 간격 최적화
+    pAdvertising->setMaxPreferred(0x12);
     BLEDevice::startAdvertising();
     Serial.println("   ✓ BLE 광고 시작 완료");
     
@@ -86,12 +94,13 @@ void loop() {
     static int buttonCount = 0;
     static unsigned long lastStatus = 0;
     
-    // 10초마다 상태 확인
-    if (millis() - lastStatus > 10000) {
+    // 5초마다 상태 확인 (더 자주)
+    if (millis() - lastStatus > 5000) {
         Serial.print("📡 BLE 상태 체크 - 연결됨: ");
-        Serial.print(deviceConnected ? "YES" : "NO");
+        Serial.print(deviceConnected ? "YES ✅" : "NO ❌");
         Serial.print(" | 버튼 카운트: ");
-        Serial.println(buttonCount);
+        Serial.print(buttonCount);
+        Serial.println(" | 연결 대기 중...");
         lastStatus = millis();
     }
     
