@@ -90,28 +90,9 @@ BLENimbleManager::~BLENimbleManager() {
 
 bool BLENimbleManager::begin() {
     try {
-        // BLE 초기화 전 기존 연결 정리
-        // Clean up existing connections before BLE initialization
-        if (NimBLEDevice::getInitialized()) {
-            NimBLEDevice::deinit(true);
-        }
-        delay(1000);
-        
-        // BLE 장치 초기화
-        // Initialize BLE device
+        // 최소한의 BLE 초기화 (문제 해결)
+        // Minimal BLE initialization (troubleshooting)
         NimBLEDevice::init(BLE_DEVICE_NAME);
-        
-        // 전력 설정 (연결 범위 향상)
-        // Set power level (improve connection range)
-        NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-        
-        // MTU 설정을 더 보수적으로 (연결 성공률 향상)
-        // Set MTU more conservatively (improve connection success rate)
-        NimBLEDevice::setMTU(247);  // 512 -> 247로 변경
-        
-        // 보안 설정 제거 (기본값 사용)
-        // Remove security settings (use defaults)
-        // 기본 NimBLE 보안 설정 사용
         
         // 서버 생성 및 콜백 설정
         // Create server and set callbacks
