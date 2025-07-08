@@ -30,46 +30,146 @@ class WebBLEInterface {
     }
     
     /**
-     * Connect to ESP32 device via BLE
-     * BLE를 통해 ESP32 장치에 연결
+     * Connect to ESP32 device via BLE with improved error handling
+     * 개선된 오류 처리로 ESP32 장치에 BLE 연결
      */
     async connect() {
         try {
-            console.log('Scanning for GHOSTYPE device...');
+            console.log('🔍 GHOSTYPE 장치 검색 중...');
             
-            // Request BLE device
+            // 연결 시도 전 기존 연결 정리
+            if (this.device && this.device.gatt.connected) {
+                await this.device.gatt.disconnect();
+                await this.delay(500);
+            }
+            
+            // BLE 장치 요청 (더 관대한 필터)
+            console.log('📱 BLE 장치 요청...');
             this.device = await navigator.bluetooth.requestDevice({
-                filters: [{ name: 'GHOSTYPE' }],
-                optionalServices: [this.SERVICE_UUID]
+                filters: [
+                    { name: 'GHOSTYPE' },
+                    { namePrefix: 'GHOST' },  // 이름이 잘린 경우 대비
+                    { namePrefix: 'ESP32' }   // ESP32 기본 이름
+                ],
+                optionalServices: [this.SERVICE_UUID],
+                acceptAllDevices: false
             });
             
-            // Connect to GATT server
-            console.log('Connecting to GATT server...');
-            this.server = await this.device.gatt.connect();
+            console.log(`🎯 장치 발견: ${this.device.name || 'Unknown'}`);
             
-            // Get service
-            console.log('Getting service...');
-            this.service = await this.server.getPrimaryService(this.SERVICE_UUID);
+            // 연결 끊김 이벤트 리스너 추가
+            this.device.addEventListener('gattserverdisconnected', () => {
+                console.log('⚠️ 장치 연결이 끊어졌습니다');
+                this.connected = false;
+                this.cleanup();
+            });
             
-            // Get characteristics
-            console.log('Getting characteristics...');
-            this.rxCharacteristic = await this.service.getCharacteristic(this.RX_CHAR_UUID);
-            this.txCharacteristic = await this.service.getCharacteristic(this.TX_CHAR_UUID);
+            // GATT 서버 연결 (재시도 로직)
+            console.log('🔗 GATT 서버 연결 중...');
+            let retryCount = 0;
+            const maxRetries = 3;
             
-            // Set up notifications
-            await this.txCharacteristic.startNotifications();
-            this.txCharacteristic.addEventListener('characteristicvaluechanged', 
-                this.handleNotification.bind(this));
+            while (retryCount < maxRetries) {
+                try {
+                    this.server = await this.device.gatt.connect();
+                    console.log('✅ GATT 서버 연결 성공');
+                    break;
+                } catch (connectError) {
+                    retryCount++;
+                    console.warn(`❌ GATT 연결 실패 (${retryCount}/${maxRetries}):`, connectError.message);
+                    
+                    if (retryCount < maxRetries) {
+                        console.log(`🔄 ${2000 * retryCount}ms 후 재시도...`);
+                        await this.delay(2000 * retryCount);
+                    } else {
+                        throw new Error(`GATT 서버 연결 실패: ${connectError.message}`);
+                    }
+                }
+            }
+            
+            // 서비스 가져오기
+            console.log('🛠️ 서비스 탐색 중...');
+            try {
+                this.service = await this.server.getPrimaryService(this.SERVICE_UUID);
+                console.log('✅ 서비스 발견');
+            } catch (serviceError) {
+                throw new Error(`서비스를 찾을 수 없습니다: ${serviceError.message}`);
+            }
+            
+            // 특성 가져오기
+            console.log('📡 특성 설정 중...');
+            try {
+                this.rxCharacteristic = await this.service.getCharacteristic(this.RX_CHAR_UUID);
+                this.txCharacteristic = await this.service.getCharacteristic(this.TX_CHAR_UUID);
+                console.log('✅ 특성 설정 완료');
+            } catch (charError) {
+                throw new Error(`특성을 찾을 수 없습니다: ${charError.message}`);
+            }
+            
+            // 알림 설정
+            console.log('🔔 알림 설정 중...');
+            try {
+                await this.txCharacteristic.startNotifications();
+                this.txCharacteristic.addEventListener('characteristicvaluechanged', 
+                    this.handleNotification.bind(this));
+                console.log('✅ 알림 설정 완료');
+            } catch (notifyError) {
+                console.warn('⚠️ 알림 설정 실패:', notifyError.message);
+                // 알림 실패는 치명적이지 않으므로 계속 진행
+            }
+            
+            // 연결 테스트
+            console.log('🧪 연결 테스트 중...');
+            try {
+                await this.sendCommand('GHTYPE_TEST');
+                console.log('✅ 연결 테스트 성공');
+            } catch (testError) {
+                console.warn('⚠️ 연결 테스트 실패:', testError.message);
+                // 테스트 실패도 치명적이지 않으므로 계속 진행
+            }
             
             this.connected = true;
-            console.log('✅ Connected to GHOSTYPE device');
+            console.log('🎉 GHOSTYPE 장치 연결 완료!');
             
             return true;
+            
         } catch (error) {
-            console.error('Connection failed:', error);
+            console.error('💥 연결 실패:', error);
             this.connected = false;
-            throw error;
+            this.cleanup();
+            
+            // 사용자 친화적인 오류 메시지
+            let userMessage = '연결에 실패했습니다. ';
+            if (error.message.includes('User cancelled')) {
+                userMessage = '사용자가 연결을 취소했습니다.';
+            } else if (error.message.includes('GATT')) {
+                userMessage = 'ESP32 장치와 연결할 수 없습니다. 장치가 켜져 있고 범위 내에 있는지 확인하세요.';
+            } else if (error.message.includes('서비스')) {
+                userMessage = 'GHOSTYPE 서비스를 찾을 수 없습니다. 펌웨어가 올바른지 확인하세요.';
+            }
+            
+            throw new Error(userMessage);
         }
+    }
+    
+    /**
+     * Clean up connection resources
+     * 연결 리소스 정리
+     */
+    cleanup() {
+        if (this.txCharacteristic) {
+            try {
+                this.txCharacteristic.removeEventListener('characteristicvaluechanged', 
+                    this.handleNotification.bind(this));
+            } catch (e) {
+                // 무시
+            }
+        }
+        
+        this.rxCharacteristic = null;
+        this.txCharacteristic = null;
+        this.service = null;
+        this.server = null;
     }
     
     /**
@@ -162,8 +262,8 @@ class WebBLEInterface {
         const encoder = new TextEncoder();
         const bytes = encoder.encode(json);
         
-        // Check MTU size (ESP32 is configured for 512 bytes)
-        if (bytes.length > 512) {
+        // Check MTU size (ESP32 is configured for 247 bytes)
+        if (bytes.length > 247) {
             console.warn('Data exceeds MTU size, may be fragmented');
         }
         

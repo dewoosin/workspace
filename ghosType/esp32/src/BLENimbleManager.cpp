@@ -90,40 +90,83 @@ BLENimbleManager::~BLENimbleManager() {
 
 bool BLENimbleManager::begin() {
     try {
+        // BLE 초기화 전 기존 연결 정리
+        // Clean up existing connections before BLE initialization
+        NimBLEDevice::deinit(true);
+        delay(1000);
+        
+        // BLE 장치 초기화
+        // Initialize BLE device
         NimBLEDevice::init(BLE_DEVICE_NAME);
+        
+        // 연결 매개변수 설정 (더 관대한 설정)
+        // Set connection parameters (more permissive settings)
+        NimBLEDevice::setConnectionParams(12, 12, 0, 51); // interval: 15ms, timeout: 510ms
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
         
-        // Set MTU to 512 bytes for large JSON payloads
-        // 큰 JSON 페이로드를 위해 MTU를 512바이트로 설정
-        NimBLEDevice::setMTU(512);
+        // MTU 설정을 더 보수적으로 (연결 성공률 향상)
+        // Set MTU more conservatively (improve connection success rate)
+        NimBLEDevice::setMTU(247);  // 512 -> 247로 변경
         
+        // 보안 설정 (페어링 없이 연결 허용)
+        // Security settings (allow connection without pairing)
+        NimBLEDevice::setSecurityAuth(false, false, true);
+        NimBLEDevice::setSecurityPasskey(123456);
+        NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+        
+        // 서버 생성 및 콜백 설정
+        // Create server and set callbacks
         pServer = NimBLEDevice::createServer();
         pServer->setCallbacks(new ServerCallbacks(this));
         
+        // 서비스 생성
+        // Create service
         NimBLEService* pService = pServer->createService(BLE_SERVICE_UUID);
         
+        // 수신 특성 설정 (WRITE 권한)
+        // Set RX characteristic (WRITE permission)
         pCharacteristicRX = pService->createCharacteristic(
             BLE_CHAR_UUID_RX,
             NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR
         );
         pCharacteristicRX->setCallbacks(new CharacteristicCallbacks(this));
         
+        // 송신 특성 설정 (NOTIFY 권한)
+        // Set TX characteristic (NOTIFY permission)
         pCharacteristicTX = pService->createCharacteristic(
             BLE_CHAR_UUID_TX,
             NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY
         );
         
+        // 서비스 시작
+        // Start service
         pService->start();
         
+        // 광고 설정 (더 적극적인 광고)
+        // Configure advertising (more aggressive advertising)
         pAdvertising = NimBLEDevice::getAdvertising();
         pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
+        pAdvertising->setName(BLE_DEVICE_NAME);
         pAdvertising->setScanResponse(true);
-        pAdvertising->setMinPreferred(0x06);
-        pAdvertising->setMaxPreferred(0x12);
+        
+        // 광고 간격 설정 (더 빠른 광고)
+        // Set advertising interval (faster advertising)
+        pAdvertising->setMinInterval(100);  // 62.5ms
+        pAdvertising->setMaxInterval(200);  // 125ms
+        
+        // 연결 매개변수 권장값 설정
+        // Set recommended connection parameters
+        pAdvertising->setMinPreferred(0x06);  // 7.5ms
+        pAdvertising->setMaxPreferred(0x12);  // 22.5ms
+        
+        // 광고 시작
+        // Start advertising
         pAdvertising->start();
         
-        // Production build - no serial logging
-        // 프로덕션 빌드 - 시리얼 로깅 없음
+        // 연결 상태 초기화
+        // Initialize connection state
+        deviceConnected = false;
+        
         return true;
         
     } catch (...) {

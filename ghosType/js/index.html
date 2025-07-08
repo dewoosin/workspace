@@ -243,6 +243,7 @@
             <button class="btn-secondary" onclick="setTestText('대한민국 Korea 화이팅!')">Mixed Complex</button>
             <button class="btn-secondary" onclick="setTestText('Test 되 vs 돼 example')">되/돼 Test</button>
             <button class="btn-secondary" onclick="setTestText('맑은 sky 넓은 sea')">Complex Jamo</button>
+            <button class="btn-secondary" onclick="runBLEDiagnostics()" style="background: #fd7e14; border-color: #fd7e14;">🔧 Run Diagnostics</button>
         </div>
         
         <!-- Log -->
@@ -252,6 +253,7 @@
     <!-- Load JavaScript -->
     <script src="hangulPreprocessor.js"></script>
     <script src="webBLEInterface.js"></script>
+    <script src="bleConnectionDiagnostics.js"></script>
     <script>
         // Initialize
         let ble = null;
