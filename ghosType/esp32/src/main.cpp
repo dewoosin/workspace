@@ -4,6 +4,8 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <esp_gap_ble_api.h>
+#include <USB.h>
+#include <USBHIDKeyboard.h>
 
 #define BUTTON_PIN 0
 
@@ -11,6 +13,9 @@ BLEServer* pServer = NULL;
 BLECharacteristic* pRxCharacteristic = NULL;  // 수신용
 BLECharacteristic* pTxCharacteristic = NULL;  // 송신용
 bool deviceConnected = false;
+
+// HID 키보드 객체
+USBHIDKeyboard keyboard;
 
 #define SERVICE_UUID        "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
 #define RX_CHAR_UUID        "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
@@ -58,21 +63,77 @@ class MyCallbacks: public BLECharacteristicCallbacks {
                 Serial.println("📤 응답 전송: " + response);
             }
             
-            // TODO: 여기에 타이핑 로직 추가
-            Serial.println("⌨️ 타이핑 시뮬레이션 (HID 미구현)");
+            // 실제 타이핑 실행
+            processTypingCommand(rxValue);
         }
     }
 };
+
+// 타이핑 명령 처리 함수
+void processTypingCommand(std::string command) {
+    Serial.println("🔧 타이핑 명령 처리 시작...");
+    
+    // 프로토콜 파싱
+    if (command.find("GHTYPE_KOR:") == 0) {
+        // 한글 타이핑
+        std::string text = command.substr(11);  // "GHTYPE_KOR:" 제거
+        Serial.println("🇰🇷 한글 타이핑 모드");
+        Serial.print("📝 타이핑할 텍스트: ");
+        Serial.println(text.c_str());
+        
+        typeText(text);
+        
+    } else if (command.find("GHTYPE_ENG:") == 0) {
+        // 영문 타이핑
+        std::string text = command.substr(11);  // "GHTYPE_ENG:" 제거
+        Serial.println("🇺🇸 영문 타이핑 모드");
+        Serial.print("📝 타이핑할 텍스트: ");
+        Serial.println(text.c_str());
+        
+        typeText(text);
+        
+    } else if (command.find("GHTYPE_CFG") == 0) {
+        // 설정 명령
+        Serial.println("⚙️ 설정 명령 - 무시");
+        
+    } else {
+        // 알 수 없는 명령
+        Serial.println("❓ 알 수 없는 명령 - 무시");
+    }
+}
+
+// 실제 타이핑 실행 함수
+void typeText(std::string text) {
+    Serial.println("⌨️ HID 키보드로 타이핑 시작!");
+    
+    // 문자 하나씩 타이핑
+    for (char c : text) {
+        if (c != '\0') {
+            keyboard.write(c);
+            delay(100);  // 타이핑 속도 조절
+            Serial.print(c);
+        }
+    }
+    
+    Serial.println();
+    Serial.println("✅ 타이핑 완료!");
+}
 
 void setup() {
     Serial.begin(115200);
     delay(2000);
     
     Serial.println("\n\n=================================");
-    Serial.println("!!!! ESP32 NATIVE BLE TEST !!!!");
+    Serial.println("!!!! GHOSTYPE BLE + HID !!!!");
     Serial.println("=================================");
     
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    
+    // USB HID 초기화
+    Serial.println("0. USB HID 키보드 초기화...");
+    USB.begin();
+    keyboard.begin();
+    Serial.println("   ✓ USB HID 키보드 초기화 완료");
     
     // BLE 초기화
     Serial.println("1. BLE 초기화 시작...");
