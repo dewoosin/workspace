@@ -1,79 +1,111 @@
 #include <Arduino.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_ST7735.h>
-#include <SPI.h>
-
-// T-Dongle-S3 LCD 핀 정의
-#define TFT_CS   4
-#define TFT_DC   5
-#define TFT_RST  1
-#define TFT_MOSI 3
-#define TFT_SCLK 2
+#include <NimBLEDevice.h>
 
 // 버튼 핀
 #define BUTTON_PIN 0
 
-// LCD 객체 생성
-Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
+// BLE 설정
+BLEServer* pServer = nullptr;
+BLECharacteristic* pCharacteristic = nullptr;
+bool deviceConnected = false;
+bool oldDeviceConnected = false;
+
+#define SERVICE_UUID        "12345678-1234-5678-9012-123456789abc"
+#define CHARACTERISTIC_UUID "87654321-4321-8765-2109-cba9876543210"
+
+class MyServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+        deviceConnected = true;
+        Serial.println("BLE Client Connected!");
+    };
+
+    void onDisconnect(BLEServer* pServer) {
+        deviceConnected = false;
+        Serial.println("BLE Client Disconnected!");
+    }
+};
 
 void setup() {
     // 시리얼 초기화
     Serial.begin(115200);
     delay(2000);
     
-    Serial.println("=== T-Dongle-S3 LCD Test ===");
+    Serial.println("=== T-Dongle-S3 BLE Test ===");
+    Serial.println("LCD 없이 BLE 기능만 테스트합니다");
     
     // 버튼 설정
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     
-    // LCD 초기화 시도
-    Serial.println("Initializing LCD...");
+    // BLE 초기화
+    Serial.println("Initializing BLE...");
+    BLEDevice::init("GHOSTYPE-S3");
     
-    // ST7735 0.96" 80x160 초기화
-    tft.initR(INITR_MINI160x80);
-    tft.setRotation(3);  // 가로 모드
+    // BLE 서버 생성
+    pServer = BLEDevice::createServer();
+    pServer->setCallbacks(new MyServerCallbacks());
     
-    // 화면 지우기
-    tft.fillScreen(ST7735_BLACK);
+    // 서비스 생성
+    BLEService *pService = pServer->createService(SERVICE_UUID);
     
-    // 테스트 텍스트
-    tft.setCursor(0, 0);
-    tft.setTextColor(ST7735_WHITE);
-    tft.setTextSize(1);
-    tft.println("T-Dongle-S3");
-    tft.println("LCD Test");
+    // 특성 생성
+    pCharacteristic = pService->createCharacteristic(
+                      CHARACTERISTIC_UUID,
+                      NIMBLE_PROPERTY::READ |
+                      NIMBLE_PROPERTY::WRITE |
+                      NIMBLE_PROPERTY::NOTIFY
+                    );
     
-    // 색상 테스트
-    tft.fillRect(0, 20, 20, 20, ST7735_RED);
-    tft.fillRect(20, 20, 20, 20, ST7735_GREEN);
-    tft.fillRect(40, 20, 20, 20, ST7735_BLUE);
+    pCharacteristic->setValue("Hello GHOSTYPE");
     
-    Serial.println("LCD initialized!");
-    Serial.println("Press BOOT button to test");
+    // 서비스 시작
+    pService->start();
+    
+    // 광고 시작
+    BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->setScanResponse(true);
+    pAdvertising->setMinPreferred(0x06);
+    pAdvertising->setMinPreferred(0x12);
+    BLEDevice::startAdvertising();
+    
+    Serial.println("BLE Ready! Device name: GHOSTYPE-S3");
+    Serial.println("Waiting for client connection...");
 }
 
 void loop() {
     static bool buttonPressed = false;
-    static int pressCount = 0;
+    static int buttonCount = 0;
     
     // 버튼 확인
     if (digitalRead(BUTTON_PIN) == LOW && !buttonPressed) {
         buttonPressed = true;
-        pressCount++;
+        buttonCount++;
         
         Serial.print("Button pressed! Count: ");
-        Serial.println(pressCount);
+        Serial.println(buttonCount);
         
-        // LCD에 카운트 표시
-        tft.fillRect(0, 50, 160, 20, ST7735_BLACK);  // 이전 텍스트 지우기
-        tft.setCursor(0, 50);
-        tft.setTextColor(ST7735_YELLOW);
-        tft.print("Press: ");
-        tft.println(pressCount);
+        // BLE로 버튼 카운트 전송
+        if (deviceConnected) {
+            String value = "Button: " + String(buttonCount);
+            pCharacteristic->setValue(value.c_str());
+            pCharacteristic->notify();
+            Serial.println("Sent to BLE: " + value);
+        }
         
     } else if (digitalRead(BUTTON_PIN) == HIGH) {
         buttonPressed = false;
     }
     
-    delay(50);  // 디바운스
+    // 연결 상태 변경 처리
+    if (!deviceConnected && oldDeviceConnected) {
+        delay(500);
+        pServer->startAdvertising();
+        Serial.println("Start advertising again");
+        oldDeviceConnected = deviceConnected;
+    }
+    if (deviceConnected && !oldDeviceConnected) {
+        oldDeviceConnected = deviceConnected;
+    }
+    
+    delay(50);
 }
