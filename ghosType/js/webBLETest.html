@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 BLE 테스트</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.disconnected { background: #f8d7da; color: #721c24; }
+        .status.connected { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 ESP32 BLE 직접 테스트</h1>
+        
+        <div id="status" class="status disconnected">
+            연결 상태: 연결 안됨
+        </div>
+        
+        <div class="controls">
+            <button class="btn-primary" onclick="scanDevices()">🔍 장치 스캔</button>
+            <button class="btn-success" onclick="connectToESP32()">🔗 ESP32 연결</button>
+            <button class="btn-warning" onclick="sendTestData()">📤 테스트 데이터</button>
+            <button class="btn-danger" onclick="disconnect()">❌ 연결 해제</button>
+            <button class="btn-primary" onclick="clearLog()">🧹 로그 지우기</button>
+        </div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        let device = null;
+        let server = null;
+        let service = null;
+        let rxCharacteristic = null;
+        let txCharacteristic = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            
+            let prefix = '';
+            switch(type) {
+                case 'success': prefix = '✅'; break;
+                case 'error': prefix = '❌'; break;
+                case 'warning': prefix = '⚠️'; break;
+                case 'info': prefix = 'ℹ️'; break;
+            }
+            
+            entry.textContent = `[${timestamp}] ${prefix} ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '연결 상태: ESP32 연결됨';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '연결 상태: 연결 안됨';
+            }
+        }
+
+        async function scanDevices() {
+            log('BLE 장치 스캔 시작...');
+            
+            try {
+                if (!navigator.bluetooth) {
+                    throw new Error('이 브라우저는 Web Bluetooth를 지원하지 않습니다');
+                }
+
+                log('모든 BLE 장치 스캔 중...');
+                device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                });
+
+                log(`장치 발견: ${device.name || '(이름 없음)'} (ID: ${device.id})`, 'success');
+                
+                if (device.name === 'ESP32') {
+                    log('ESP32 장치를 찾았습니다!', 'success');
+                } else {
+                    log('다른 BLE 장치입니다. ESP32를 찾아보세요.', 'warning');
+                }
+
+            } catch (error) {
+                log(`스캔 실패: ${error.message}`, 'error');
+            }
+        }
+
+        async function connectToESP32() {
+            log('ESP32 연결 시도...');
+            
+            try {
+                if (!navigator.bluetooth) {
+                    throw new Error('이 브라우저는 Web Bluetooth를 지원하지 않습니다');
+                }
+
+                log('ESP32 장치 검색 중...');
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { name: 'ESP32' },
+                        { namePrefix: 'ESP32' }
+                    ],
+                    optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                });
+
+                log(`장치 발견: ${device.name} (ID: ${device.id})`, 'success');
+
+                // 연결 해제 이벤트 리스너
+                device.addEventListener('gattserverdisconnected', () => {
+                    log('GATT 서버 연결이 끊어졌습니다', 'warning');
+                    updateStatus(false);
+                });
+
+                log('GATT 서버 연결 중...');
+                server = await device.gatt.connect();
+                log('GATT 서버 연결 성공', 'success');
+
+                log('서비스 검색 중...');
+                service = await server.getPrimaryService('12345678-1234-5678-9012-123456789abc');
+                log('서비스 발견', 'success');
+
+                log('특성 설정 중...');
+                rxCharacteristic = await service.getCharacteristic('12345678-1234-5678-9012-123456789abd');
+                txCharacteristic = await service.getCharacteristic('12345678-1234-5678-9012-123456789abe');
+                log('특성 설정 완료', 'success');
+
+                log('알림 설정 중...');
+                await txCharacteristic.startNotifications();
+                txCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = new TextDecoder().decode(event.target.value);
+                    log(`ESP32 응답: ${value}`, 'success');
+                });
+                log('알림 설정 완료', 'success');
+
+                log('🎉 ESP32 연결 완료!', 'success');
+                updateStatus(true);
+
+            } catch (error) {
+                log(`연결 실패: ${error.message}`, 'error');
+                updateStatus(false);
+            }
+        }
+
+        async function sendTestData() {
+            if (!rxCharacteristic) {
+                log('ESP32에 연결되지 않았습니다', 'error');
+                return;
+            }
+
+            try {
+                const testMessage = 'Hello ESP32!';
+                log(`테스트 데이터 전송: "${testMessage}"`);
+                
+                await rxCharacteristic.writeValueWithoutResponse(
+                    new TextEncoder().encode(testMessage)
+                );
+                
+                log('데이터 전송 완료', 'success');
+                
+            } catch (error) {
+                log(`데이터 전송 실패: ${error.message}`, 'error');
+            }
+        }
+
+        function disconnect() {
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+                log('연결 해제됨');
+                updateStatus(false);
+            } else {
+                log('연결된 장치가 없습니다', 'warning');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // 초기화
+        log('ESP32 BLE 테스트 페이지 준비됨');
+        log('먼저 "🔍 장치 스캔" 또는 "🔗 ESP32 연결"을 클릭하세요');
+
+        // 브라우저 지원 확인
+        if (!navigator.bluetooth) {
+            log('❌ 이 브라우저는 Web Bluetooth를 지원하지 않습니다', 'error');
+            log('Chrome, Edge, Opera 브라우저를 사용하세요', 'warning');
+        }
+    </script>
+</body>
+</html>
