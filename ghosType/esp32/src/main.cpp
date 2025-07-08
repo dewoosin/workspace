@@ -513,9 +513,9 @@ bool initializeHardware() {
         Keyboard.begin();
         safeDelay(500);   // Wait for HID registration
         
-        // Test keyboard functionality with space character
-        Keyboard.write(' ');
-        safeDelay(100);
+        // 키보드 기능 테스트 제거 (자동 스페이스 방지)
+        // Remove keyboard test (prevent automatic space)
+        // Keyboard.write(' '); - 제거됨
         
         usbHidReady = true;
         

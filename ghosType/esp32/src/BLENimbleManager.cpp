@@ -92,7 +92,9 @@ bool BLENimbleManager::begin() {
     try {
         // BLE 초기화 전 기존 연결 정리
         // Clean up existing connections before BLE initialization
-        NimBLEDevice::deinit(true);
+        if (NimBLEDevice::getInitialized()) {
+            NimBLEDevice::deinit(true);
+        }
         delay(1000);
         
         // BLE 장치 초기화
@@ -141,22 +143,16 @@ bool BLENimbleManager::begin() {
         // Start service
         pService->start();
         
-        // 광고 설정 (더 적극적인 광고)
-        // Configure advertising (more aggressive advertising)
+        // 광고 설정 (기본값으로 복원)
+        // Configure advertising (restore to defaults)
         pAdvertising = NimBLEDevice::getAdvertising();
         pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
         pAdvertising->setName(BLE_DEVICE_NAME);
         pAdvertising->setScanResponse(true);
         
-        // 광고 간격 설정 (더 빠른 광고)
-        // Set advertising interval (faster advertising)
-        pAdvertising->setMinInterval(100);  // 62.5ms
-        pAdvertising->setMaxInterval(200);  // 125ms
-        
-        // 연결 매개변수 권장값 설정 (광고에서)
-        // Set recommended connection parameters (in advertising)
-        pAdvertising->setMinPreferred(0x0C);  // 15ms (더 안정적)
-        pAdvertising->setMaxPreferred(0x18);  // 30ms (더 안정적)
+        // 기본 광고 간격 사용 (안정성 우선)
+        // Use default advertising intervals (stability first)
+        // setMinInterval/setMaxInterval 제거 - 기본값 사용
         
         // 광고 시작
         // Start advertising
