@@ -1402,8 +1402,8 @@
                 // BLE writeValue는 512바이트로 제한됨 - 청크로 분할 전송
                 const MAX_CHUNK_SIZE = 500; // 안전마진을 위해 500바이트로 제한
                 
-                if (data.length > 2000) {
-                    addLog(`⚠️ 텍스트가 너무 깁니다 (${data.length}바이트). 2000바이트 이하로 줄여주세요.`, 'error');
+                if (data.length > 10000) {
+                    addLog(`⚠️ 텍스트가 너무 깁니다 (${data.length}바이트). 10KB 이하로 줄여주세요.`, 'error');
                     return false;
                 }
                 
@@ -1413,7 +1413,8 @@
                     addLog(`📤 프로토콜 전송 (${data.length}바이트): "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`, 'success');
                 } else {
                     // 큰 데이터는 청크로 분할 전송
-                    addLog(`📤 큰 데이터를 청크로 분할 전송 (총 ${data.length}바이트)`, 'info');
+                    const totalChunks = Math.ceil(data.length / MAX_CHUNK_SIZE);
+                    addLog(`📤 큰 데이터를 청크로 분할 전송 (총 ${data.length}바이트, ${totalChunks}개 청크)`, 'info');
                     
                     // 첫 번째 청크에 특별한 헤더 추가로 ESP32에게 분할 전송임을 알림
                     const firstChunkHeader = "CHUNK_START:";
@@ -1441,19 +1442,22 @@
                         }
                         
                         await rxCharacteristic.writeValue(chunk);
-                        console.log(`청크 ${chunkIndex + 1} 전송: ${chunk.length}바이트`);
+                        
+                        // 진행 상황 표시
+                        const progress = Math.round((chunkIndex + 1) / totalChunks * 100);
+                        console.log(`청크 ${chunkIndex + 1}/${totalChunks} 전송 (${progress}%): ${chunk.length}바이트`);
                         
                         chunkIndex++;
                         
-                        // 청크 간 딜레이
-                        await new Promise(resolve => setTimeout(resolve, 100));
+                        // 청크 간 딜레이 단축 (더 빠른 전송)
+                        await new Promise(resolve => setTimeout(resolve, 50));
                     }
                     
                     // 전송 완료 마커
                     const endMarker = encoder.encode("CHUNK_END");
                     await rxCharacteristic.writeValue(endMarker);
                     
-                    addLog(`📤 분할 전송 완료: ${Math.ceil(data.length/MAX_CHUNK_SIZE)}개 청크`, 'success');
+                    addLog(`📤 분할 전송 완료: ${totalChunks}개 청크 (${data.length}바이트)`, 'success');
                 }
                 
                 return true;

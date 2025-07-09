@@ -40,9 +40,10 @@ bool isTyping = false;
 unsigned long lastTypeTime = 0;
 int globalTypingSpeed = 10; // 웹 기본값과 동일 (selected option)
 
-// 청크 재조립을 위한 변수들
+// 청크 재조립을 위한 변수들 (큰 데이터 지원)
 String chunkBuffer = "";
 bool isReceivingChunks = false;
+unsigned long chunkStartTime = 0;
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
 #define DEBUG_ENABLED true
@@ -87,8 +88,8 @@ class MyCallbacks: public BLECharacteristicCallbacks {
             DEBUG_PRINTLN(" bytes");
             
             // 너무 긴 텍스트는 거부
-            if (rxValue.length() > 2000) {
-                DEBUG_PRINTLN("텍스트가 너무 깁니다! 2000바이트 이하로 제한됩니다.");
+            if (rxValue.length() > 10000) {
+                DEBUG_PRINTLN("텍스트가 너무 깁니다! 10KB 이하로 제한됩니다.");
                 return;
             }
             
@@ -100,13 +101,20 @@ class MyCallbacks: public BLECharacteristicCallbacks {
                 // 청크 시작 - 버퍼 초기화하고 첫 번째 데이터 저장
                 isReceivingChunks = true;
                 chunkBuffer = receivedText.substring(12); // "CHUNK_START:" 제거
+                chunkStartTime = millis();
                 DEBUG_PRINTLN("청크 수신 시작");
+                DEBUG_PRINT("초기 청크 길이: ");
+                DEBUG_PRINTLN(chunkBuffer.length());
                 return; // 아직 완전하지 않으므로 큐에 추가하지 않음
             } else if (receivedText == "CHUNK_END") {
                 // 청크 종료 - 완성된 데이터를 큐에 추가
                 if (isReceivingChunks) {
+                    unsigned long elapsed = millis() - chunkStartTime;
                     DEBUG_PRINT("청크 수신 완료, 총 길이: ");
-                    DEBUG_PRINTLN(chunkBuffer.length());
+                    DEBUG_PRINT(chunkBuffer.length());
+                    DEBUG_PRINT("바이트, 소요 시간: ");
+                    DEBUG_PRINT(elapsed);
+                    DEBUG_PRINTLN("ms");
                     
                     // 완성된 데이터를 큐에 추가
                     if (xSemaphoreTake(queueMutex, portMAX_DELAY) == pdTRUE) {
@@ -118,13 +126,17 @@ class MyCallbacks: public BLECharacteristicCallbacks {
                     // 상태 리셋
                     isReceivingChunks = false;
                     chunkBuffer = "";
+                    chunkStartTime = 0;
                 }
                 return;
             } else if (isReceivingChunks) {
                 // 중간 청크 - 버퍼에 추가
                 chunkBuffer += receivedText;
                 DEBUG_PRINT("청크 추가, 현재 길이: ");
-                DEBUG_PRINTLN(chunkBuffer.length());
+                DEBUG_PRINT(chunkBuffer.length());
+                DEBUG_PRINT("바이트, 남은 힙: ");
+                DEBUG_PRINT(ESP.getFreeHeap());
+                DEBUG_PRINTLN(" bytes");
                 return; // 아직 완전하지 않으므로 큐에 추가하지 않음
             }
             
@@ -164,7 +176,7 @@ void processTypingQueue() {
             
             // JSON 파싱 시도
             if (text.startsWith("{")) {
-                StaticJsonDocument<2048> doc; // 크기를 4배로 증가
+                StaticJsonDocument<8192> doc; // 크기를 8KB로 증가
                 DeserializationError error = deserializeJson(doc, text);
                 
                 if (!error && doc.containsKey("text")) {
