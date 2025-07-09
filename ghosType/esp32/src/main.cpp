@@ -30,10 +30,10 @@ bool deviceConnected = false;
 std::queue<String> typingQueue;
 SemaphoreHandle_t queueMutex;
 
-// BLE UUID
-#define SERVICE_UUID        "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-#define RX_CHAR_UUID        "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-#define TX_CHAR_UUID        "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+// BLE UUID - JavaScript와 일치
+#define SERVICE_UUID        "12345678-1234-5678-9012-123456789abc"
+#define RX_CHAR_UUID        "12345678-1234-5678-9012-123456789abd"
+#define TX_CHAR_UUID        "12345678-1234-5678-9012-123456789abe"
 
 // 타이핑 상태
 bool isTyping = false;
@@ -174,8 +174,8 @@ void processTypingQueue() {
 
 // BLE 초기화 태스크
 void bleTask(void * parameter) {
-    // BLE 초기화
-    BLEDevice::init("GHOSTYPE-S3");
+    // BLE 초기화 - JavaScript와 일치
+    BLEDevice::init("GHOSTYPE");
     
     // 보안 비활성화
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_NO_BOND;

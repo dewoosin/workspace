@@ -324,7 +324,7 @@
         
         // Send button handler
         sendBtn.addEventListener('click', async () => {
-            const text = textInput.value.trim();
+            const text = textInput.value; // trim() 제거 - 줄바꿈 보존
             if (!text) {
                 log('Please enter some text', 'error');
                 return;
@@ -334,7 +334,7 @@
                 sendBtn.disabled = true;
                 const speed = parseInt(speedSlider.value);
                 
-                log(`Sending text (${speed} CPS): "${text}"`);
+                log(`Sending text (${speed} CPS): "${text.replace(/\n/g, '\\n')}"`);
                 await ble.sendText(text, { speed_cps: speed });
                 
                 log('Text sent successfully!', 'success');
@@ -347,7 +347,7 @@
         
         // Send with Enter button handler
         sendWithEnterBtn.addEventListener('click', async () => {
-            const text = textInput.value.trim();
+            const text = textInput.value; // trim() 제거 - 줄바꿈 보존
             if (!text) {
                 log('Please enter some text', 'error');
                 return;
@@ -360,7 +360,7 @@
                 // Add newline to the text
                 const textWithEnter = text + '\n';
                 
-                log(`Sending text with Enter (${speed} CPS): "${text}"`);
+                log(`Sending text with Enter (${speed} CPS): "${text.replace(/\n/g, '\\n')} + Enter"`);
                 await ble.sendText(textWithEnter, { speed_cps: speed });
                 
                 log('Text sent with Enter successfully!', 'success');
@@ -387,7 +387,12 @@
             const text = e.target.value;
             if (text) {
                 const processed = preprocessor.formatForESP32(text);
-                previewText.textContent = processed.text;
+                // 특수 문자를 표시하도록 변환
+                const displayText = processed.text
+                    .replace(/\n/g, '↵\n')  // 엔터키 표시
+                    .replace(/\t/g, '→\t')  // 탭 표시
+                    .replace(/\r/g, '↓');   // 캐리지 리턴 표시
+                previewText.textContent = displayText;
                 preview.style.display = 'block';
             } else {
                 preview.style.display = 'none';
