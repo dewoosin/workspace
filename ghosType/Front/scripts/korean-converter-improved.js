@@ -230,6 +230,10 @@ export function analyzeText(text) {
         } else if (code >= 32 && code <= 126) {
             hasSpecial = true;
             stats.specialChars++;
+        } else if (code === 10 || code === 13 || code === 9) {
+            // 엔터키(\n), 캐리지 리턴(\r), 탭(\t)은 특수 문자로 분류
+            hasSpecial = true;
+            stats.specialChars++;
         } else {
             hasUnsupported = true;
             stats.unsupportedChars++;
