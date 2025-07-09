@@ -385,8 +385,14 @@
         // Text input handler - show preview
         textInput.addEventListener('input', (e) => {
             const text = e.target.value;
+            console.log('입력 텍스트:', JSON.stringify(text));
+            console.log('입력에 엔터키 있나?', text.includes('\n'));
+            
             if (text) {
                 const processed = preprocessor.formatForESP32(text);
+                console.log('처리된 텍스트:', JSON.stringify(processed.text));
+                console.log('처리된 텍스트에 엔터키 있나?', processed.text.includes('\n'));
+                
                 // 특수 문자를 표시하도록 변환
                 const displayText = processed.text
                     .replace(/\n/g, '↵\n')  // 엔터키 표시
