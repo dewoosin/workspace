@@ -139,17 +139,42 @@ void processTypingQueue() {
             if (textToType.length() > 0) {
                 int delay_ms = 1000 / speed_cps; // 속도에 따른 딜레이 계산
                 
+                Serial.print("타이핑할 텍스트: ");
+                Serial.println(textToType);
+                Serial.print("텍스트 길이: ");
+                Serial.println(textToType.length());
+                
                 for (int i = 0; i < textToType.length(); i++) {
                     char c = textToType[i];
+                    
+                    Serial.print("문자 ");
+                    Serial.print(i);
+                    Serial.print(": ASCII ");
+                    Serial.print((int)c);
+                    Serial.print(" (");
+                    if (c == '\n') {
+                        Serial.print("엔터키");
+                    } else if (c == '\r') {
+                        Serial.print("캐리지 리턴");
+                    } else if (c == '\t') {
+                        Serial.print("탭");
+                    } else if (c >= 32 && c <= 126) {
+                        Serial.print(c);
+                    } else {
+                        Serial.print("특수문자");
+                    }
+                    Serial.println(")");
                     
                     // 특수 문자 처리
                     if (c == '\n' || c == '\r') {
                         // 엔터키
+                        Serial.println("엔터키 입력!");
                         keyboard.press(KEY_RETURN);
                         delay(10);
                         keyboard.release(KEY_RETURN);
                     } else if (c == '\t') {
                         // 탭키
+                        Serial.println("탭키 입력!");
                         keyboard.press(KEY_TAB);
                         delay(10);
                         keyboard.release(KEY_TAB);
