@@ -125,7 +125,7 @@
             margin: 20px 0;
         }
 
-        input[type="text"] {
+        input[type="text"], textarea {
             width: 85%;
             padding: 12px 20px;
             border: 2px solid #ddd;
@@ -133,9 +133,10 @@
             font-size: 1.1em;
             margin-right: 10px;
             transition: all 0.3s ease;
+            font-family: inherit;
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -321,18 +322,6 @@
             background: linear-gradient(45deg, #5a2d91, #d91a72);
         }
 
-        .keyboard-test {
-            margin: 20px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            border: 1px solid #dee2e6;
-        }
-
-        .keyboard-test h4 {
-            color: #495057;
-            margin-bottom: 15px;
-        }
 
         /* 카운트다운 모달 스타일 */
         .countdown-modal {
@@ -633,7 +622,7 @@
         </div>
 
         <div class="message-area">
-            <input type="text" id="messageInput" placeholder="한글/영문 메시지를 입력하세요..." onclick="openMessageModal()" aria-label="메시지 입력">
+            <textarea id="messageInput" placeholder="한글/영문 메시지를 입력하세요..." onclick="openMessageModal()" aria-label="메시지 입력" rows="1" style="resize: vertical; min-height: 48px; max-height: 120px; overflow-y: auto;"></textarea>
             <button class="send-btn" id="sendBtn" onclick="startCountdown()" disabled aria-label="메시지 전송">📤 전송</button>
         </div>
 
@@ -644,44 +633,6 @@
             <div class="protocol-info" id="protocolInfo"></div>
         </div>
 
-        <!-- 키보드 테스트 영역 -->
-        <div class="keyboard-test" id="keyboardTest" style="display: none;" role="region" aria-label="키보드 테스트 영역">
-            <h4>⌨️ 키보드 테스트:</h4>
-            
-            <h5>🔤 영문 테스트:</h5>
-            <div class="test-buttons" role="group" aria-label="영문 테스트 버튼들">
-                <button class="test-btn" onclick="testText('Hello World!')" aria-label="Hello World 텍스트 전송">Hello World!</button>
-                <button class="test-btn" onclick="testText('GHOSTYPE Test 123')" aria-label="GHOSTYPE Test 123 전송">영문 테스트</button>
-                <button class="test-btn" onclick="testText('The quick brown fox')" aria-label="The quick brown fox 전송">타이핑 연습</button>
-                <button class="test-btn" onclick="testText('Programming is fun!')" aria-label="Programming is fun 전송">프로그래밍</button>
-            </div>
-
-            <h5>🇰🇷 한글 테스트:</h5>
-            <div class="test-buttons" role="group" aria-label="한글 테스트 버튼들">
-                <button class="korean-test-btn" onclick="testText('안녕하세요')" aria-label="안녕하세요 전송">안녕하세요</button>
-                <button class="korean-test-btn" onclick="testText('테스트입니다')" aria-label="테스트입니다 전송">테스트입니다</button>
-                <button class="korean-test-btn" onclick="testText('한글 키보드')" aria-label="한글 키보드 전송">한글 키보드</button>
-                <button class="korean-test-btn" onclick="testText('프로그래밍')" aria-label="프로그래밍 전송">프로그래밍</button>
-            </div>
-
-            <h5>🌐 혼합 테스트:</h5>
-            <div class="test-buttons" role="group" aria-label="한글 영문 혼합 테스트 버튼들">
-                <button class="test-btn" onclick="testText('Hello 안녕')">Hello 안녕</button>
-                <button class="test-btn" onclick="testText('GHOSTYPE 한글')">GHOSTYPE 한글</button>
-                <button class="test-btn" onclick="testText('Programming은 재미있어')">Programming은 재미있어</button>
-                <button class="test-btn" onclick="testText('오늘 날씨가 nice하네요')">오늘 날씨가 nice하네요</button>
-            </div>
-
-            <h5>🎹 특수 키:</h5>
-            <div class="test-buttons" role="group" aria-label="특수 키 테스트 버튼들">
-                <button class="special-btn" onclick="testSpecial('enter')" aria-label="Enter 키 전송">Enter</button>
-                <button class="special-btn" onclick="testSpecial('tab')" aria-label="Tab 키 전송">Tab</button>
-                <button class="special-btn" onclick="testSpecial('space')" aria-label="Space 키 전송">Space</button>
-                <button class="special-btn" onclick="testSpecial('backspace')" aria-label="Backspace 키 전송">Backspace</button>
-                <button class="special-btn" onclick="testSpecial('ctrl+c')" aria-label="Ctrl+C 명령 전송">Ctrl+C</button>
-                <button class="special-btn" onclick="testSpecial('ctrl+v')" aria-label="Ctrl+V 명령 전송">Ctrl+V</button>
-            </div>
-        </div>
 
         <!-- 카운트다운 모달 -->
         <div id="countdownModal" class="countdown-modal" style="display: none;">
@@ -942,6 +893,14 @@
         }
 
         // 실시간 변환 미리보기 업데이트
+        // 긴 텍스트 축약 함수
+        function truncateText(text, maxLength = 100) {
+            if (!text || text.length <= maxLength) {
+                return text;
+            }
+            return text.substring(0, maxLength) + '...';
+        }
+
         function updateConversionPreview() {
             const input = document.getElementById('messageInput');
             const preview = document.getElementById('conversionPreview');
@@ -965,21 +924,38 @@
             // 미리보기 스타일 업데이트
             preview.className = `conversion-preview ${result.type}`;
             
+            // 긴 텍스트 축약
+            const truncatedOriginal = truncateText(result.original, 50);
+            const truncatedConverted = truncateText(result.converted, 50);
+            
+            // 엔터키 등 특수 문자 표시
+            const displayOriginal = truncatedOriginal
+                .replace(/\n/g, '↵<br>')
+                .replace(/\t/g, '→')
+                .replace(/\r/g, '↓');
+            
+            const displayConverted = truncatedConverted
+                .replace(/\n/g, '↵<br>')
+                .replace(/\t/g, '→')
+                .replace(/\r/g, '↓');
+            
             // 변환 결과 표시
             if (result.type === 'korean' || result.type === 'mixed') {
                 previewText.innerHTML = `
-                    <strong>원본:</strong> ${result.original}<br>
-                    <strong>자모:</strong> ${result.converted}<br>
+                    <strong>원본:</strong> ${displayOriginal}<br>
+                    <strong>자모:</strong> ${displayConverted}<br>
                     <strong>설명:</strong> ${result.description}
                 `;
             } else {
                 previewText.innerHTML = `
-                    <strong>텍스트:</strong> ${result.original}<br>
+                    <strong>텍스트:</strong> ${displayOriginal}<br>
                     <strong>설명:</strong> ${result.description}
                 `;
             }
             
-            protocolInfo.textContent = `전송 프로토콜: ${result.protocol}`;
+            // 프로토콜 정보도 축약
+            const truncatedProtocol = truncateText(result.protocol, 80);
+            protocolInfo.textContent = `전송 프로토콜: ${truncatedProtocol}`;
         }
 
         // ===== BLE 통신 함수들 =====
@@ -1104,20 +1080,37 @@
             
             const result = convertTextWithProtocol(text);
             
+            // 긴 텍스트 축약 (모달에서는 조금 더 길게)
+            const truncatedOriginal = truncateText(result.original, 80);
+            const truncatedConverted = truncateText(result.converted, 80);
+            
+            // 엔터키 등 특수 문자 표시
+            const displayOriginal = truncatedOriginal
+                .replace(/\n/g, '↵<br>')
+                .replace(/\t/g, '→')
+                .replace(/\r/g, '↓');
+            
+            const displayConverted = truncatedConverted
+                .replace(/\n/g, '↵<br>')
+                .replace(/\t/g, '→')
+                .replace(/\r/g, '↓');
+            
             if (result.type === 'korean' || result.type === 'mixed') {
                 previewText.innerHTML = `
-                    <strong>원본:</strong> ${result.original}<br>
-                    <strong>자모:</strong> ${result.converted}<br>
+                    <strong>원본:</strong> ${displayOriginal}<br>
+                    <strong>자모:</strong> ${displayConverted}<br>
                     <strong>설명:</strong> ${result.description}
                 `;
             } else {
                 previewText.innerHTML = `
-                    <strong>텍스트:</strong> ${result.original}<br>
+                    <strong>텍스트:</strong> ${displayOriginal}<br>
                     <strong>설명:</strong> ${result.description}
                 `;
             }
             
-            protocolInfo.textContent = `전송 프로토콜: ${result.protocol}`;
+            // 프로토콜 정보도 축약
+            const truncatedProtocol = truncateText(result.protocol, 100);
+            protocolInfo.textContent = `전송 프로토콜: ${truncatedProtocol}`;
         }
 
         function updateStatus(message, type) {
@@ -1133,14 +1126,9 @@
             // document.getElementById('messageInput').disabled = !connected;
             document.getElementById('sendBtn').disabled = !connected;
             
-            const keyboardTest = document.getElementById('keyboardTest');
-            
             if (connected) {
-                keyboardTest.style.display = 'block';
                 addLog('🇰🇷 한글 자모 변환 기능 활성화', 'info');
                 addLog('⌨️ 모든 한글이 자동으로 자모 키로 변환됩니다', 'info');
-            } else {
-                keyboardTest.style.display = 'none';
             }
         }
 
@@ -1353,12 +1341,21 @@
         }
 
         // 이벤트 리스너
-        document.getElementById('messageInput').addEventListener('input', updateConversionPreview);
+        document.getElementById('messageInput').addEventListener('input', function(event) {
+            // 텍스트에리어 자동 크기 조정 (최대 120px)
+            const textarea = event.target;
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+            
+            updateConversionPreview();
+        });
+        
         document.getElementById('messageInput').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 startCountdown();
             }
+            // Shift+Enter는 줄바꿈 허용
         });
         
         // Add paste event listener for main input field
