@@ -868,27 +868,39 @@
 
         // 스마트 텍스트 변환 (프로토콜 포함)
         function convertTextWithProtocol(text) {
+            console.log('convertTextWithProtocol 시작, 입력:', JSON.stringify(text));
+            console.log('입력에 엔터키 있나?', text.includes('\n'));
+            
             const type = analyzeText(text);
+            console.log('analyzeText 결과:', type);
             
             if (type === 'korean' || type === 'mixed') {
                 // 한글이 포함된 경우: 자모 키로 변환 후 한글 프로토콜
                 const jamoKeys = convertHangulToJamoKeys(text);
-                return {
+                console.log('jamoKeys 변환 결과:', JSON.stringify(jamoKeys));
+                console.log('변환 후 엔터키 있나?', jamoKeys.includes('\n'));
+                
+                const result = {
                     original: text,
                     converted: jamoKeys,
                     protocol: `GHTYPE_KOR:${jamoKeys}`,
                     type: type,
                     description: '한글 자모 키 변환'
                 };
+                console.log('최종 프로토콜:', JSON.stringify(result.protocol));
+                return result;
             } else {
                 // 순수 영문인 경우: 영문 프로토콜
-                return {
+                console.log('영문 처리 - 원본 그대로');
+                const result = {
                     original: text,
                     converted: text,
                     protocol: `GHTYPE_ENG:${text}`,
                     type: 'english',
                     description: '영문 직접 입력'
                 };
+                console.log('최종 프로토콜:', JSON.stringify(result.protocol));
+                return result;
             }
         }
 
@@ -1327,9 +1339,15 @@
                 return false;
             }
 
+            console.log('sendData 호출, 메시지:', JSON.stringify(message));
+            console.log('전송할 메시지에 엔터키 있나?', message.includes('\n'));
+
             try {
                 const encoder = new TextEncoder();
                 const data = encoder.encode(message);
+                
+                console.log('인코딩된 데이터:', data);
+                console.log('인코딩된 데이터 길이:', data.length);
                 
                 await rxCharacteristic.writeValue(data);
                 addLog(`📤 프로토콜 전송: "${message}"`, 'success');
