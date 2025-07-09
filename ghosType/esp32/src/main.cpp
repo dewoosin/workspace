@@ -39,16 +39,28 @@ SemaphoreHandle_t queueMutex;
 bool isTyping = false;
 unsigned long lastTypeTime = 0;
 
+// 디버깅 플래그 (디버깅 시에만 true로 설정)
+#define DEBUG_ENABLED false
+
+// 조건부 시리얼 출력 매크로
+#if DEBUG_ENABLED
+    #define DEBUG_PRINT(x) Serial.print(x)
+    #define DEBUG_PRINTLN(x) Serial.println(x)
+#else
+    #define DEBUG_PRINT(x)
+    #define DEBUG_PRINTLN(x)
+#endif
+
 // BLE 서버 콜백
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
         deviceConnected = true;
-        Serial.println("BLE 연결됨!");
+        DEBUG_PRINTLN("BLE 연결됨!");
     }
     
     void onDisconnect(BLEServer* pServer) {
         deviceConnected = false;
-        Serial.println("BLE 연결 해제됨");
+        DEBUG_PRINTLN("BLE 연결 해제됨");
         delay(500);
         pServer->getAdvertising()->start();
     }
@@ -60,8 +72,8 @@ class MyCallbacks: public BLECharacteristicCallbacks {
         std::string rxValue = pCharacteristic->getValue();
         
         if (rxValue.length() > 0) {
-            Serial.print("BLE 수신: ");
-            Serial.println(rxValue.c_str());
+            DEBUG_PRINT("BLE 수신: ");
+            DEBUG_PRINTLN(rxValue.c_str());
             
             // 뮤텍스로 큐 보호
             if (xSemaphoreTake(queueMutex, portMAX_DELAY) == pdTRUE) {
@@ -69,7 +81,7 @@ class MyCallbacks: public BLECharacteristicCallbacks {
                 typingQueue.push(String(rxValue.c_str()));
                 xSemaphoreGive(queueMutex);
                 
-                Serial.println("텍스트 큐에 추가됨");
+                DEBUG_PRINTLN("텍스트 큐에 추가됨");
             }
             
             // 응답 전송
@@ -92,8 +104,8 @@ void processTypingQueue() {
             
             // 타이핑 시작
             isTyping = true;
-            Serial.print("타이핑 시작: ");
-            Serial.println(text);
+            DEBUG_PRINT("타이핑 시작: ");
+            DEBUG_PRINTLN(text);
             
             // JSON 또는 일반 텍스트 파싱
             String textToType = "";
@@ -139,42 +151,42 @@ void processTypingQueue() {
             if (textToType.length() > 0) {
                 int delay_ms = 1000 / speed_cps; // 속도에 따른 딜레이 계산
                 
-                Serial.print("타이핑할 텍스트: ");
-                Serial.println(textToType);
-                Serial.print("텍스트 길이: ");
-                Serial.println(textToType.length());
+                DEBUG_PRINT("타이핑할 텍스트: ");
+                DEBUG_PRINTLN(textToType);
+                DEBUG_PRINT("텍스트 길이: ");
+                DEBUG_PRINTLN(textToType.length());
                 
                 for (int i = 0; i < textToType.length(); i++) {
                     char c = textToType[i];
                     
-                    Serial.print("문자 ");
-                    Serial.print(i);
-                    Serial.print(": ASCII ");
-                    Serial.print((int)c);
-                    Serial.print(" (");
+                    DEBUG_PRINT("문자 ");
+                    DEBUG_PRINT(i);
+                    DEBUG_PRINT(": ASCII ");
+                    DEBUG_PRINT((int)c);
+                    DEBUG_PRINT(" (");
                     if (c == '\n') {
-                        Serial.print("엔터키");
+                        DEBUG_PRINT("엔터키");
                     } else if (c == '\r') {
-                        Serial.print("캐리지 리턴");
+                        DEBUG_PRINT("캐리지 리턴");
                     } else if (c == '\t') {
-                        Serial.print("탭");
+                        DEBUG_PRINT("탭");
                     } else if (c >= 32 && c <= 126) {
-                        Serial.print(c);
+                        DEBUG_PRINT(c);
                     } else {
-                        Serial.print("특수문자");
+                        DEBUG_PRINT("특수문자");
                     }
-                    Serial.println(")");
+                    DEBUG_PRINTLN(")");
                     
                     // 특수 문자 처리
                     if (c == '\n' || c == '\r') {
                         // 엔터키
-                        Serial.println("엔터키 입력!");
+                        DEBUG_PRINTLN("엔터키 입력!");
                         keyboard.press(KEY_RETURN);
                         delay(10);
                         keyboard.release(KEY_RETURN);
                     } else if (c == '\t') {
                         // 탭키
-                        Serial.println("탭키 입력!");
+                        DEBUG_PRINTLN("탭키 입력!");
                         keyboard.press(KEY_TAB);
                         delay(10);
                         keyboard.release(KEY_TAB);
@@ -187,7 +199,7 @@ void processTypingQueue() {
                 }
             }
             
-            Serial.println("타이핑 완료!");
+            DEBUG_PRINTLN("타이핑 완료!");
             isTyping = false;
             lastTypeTime = millis();
             
@@ -246,15 +258,15 @@ void bleTask(void * parameter) {
     pAdvertising->setMaxPreferred(0x12);
     BLEDevice::startAdvertising();
     
-    Serial.println("BLE 태스크 시작됨!");
+    DEBUG_PRINTLN("BLE 태스크 시작됨!");
     
     // BLE 태스크 루프
     while(1) {
         // BLE 상태 체크
         static unsigned long lastCheck = 0;
         if (millis() - lastCheck > 10000) {
-            Serial.print("BLE 상태: ");
-            Serial.println(deviceConnected ? "연결됨" : "대기중");
+            DEBUG_PRINT("BLE 상태: ");
+            DEBUG_PRINTLN(deviceConnected ? "연결됨" : "대기중");
             lastCheck = millis();
         }
         
@@ -263,23 +275,25 @@ void bleTask(void * parameter) {
 }
 
 void setup() {
+    #if DEBUG_ENABLED
     Serial.begin(115200);
     delay(2000);
+    #endif
     
-    Serial.println("\n=== GHOSTYPE 실시간 BLE + HID ===");
-    Serial.println("BLE로 받은 텍스트를 즉시 USB 키보드로 타이핑합니다.");
+    DEBUG_PRINTLN("\n=== GHOSTYPE 실시간 BLE + HID ===");
+    DEBUG_PRINTLN("BLE로 받은 텍스트를 즉시 USB 키보드로 타이핑합니다.");
     
     // 큐 뮤텍스 생성
     queueMutex = xSemaphoreCreateMutex();
     
     // USB HID 초기화
-    Serial.println("1. USB HID 키보드 초기화...");
+    DEBUG_PRINTLN("1. USB HID 키보드 초기화...");
     USB.begin();
     keyboard.begin();
-    Serial.println("   ✓ HID 초기화 완료");
+    DEBUG_PRINTLN("   ✓ HID 초기화 완료");
     
     // BLE를 별도 태스크로 실행
-    Serial.println("2. BLE 태스크 생성...");
+    DEBUG_PRINTLN("2. BLE 태스크 생성...");
     xTaskCreatePinnedToCore(
         bleTask,          // 태스크 함수
         "BLE_Task",       // 태스크 이름
@@ -290,8 +304,8 @@ void setup() {
         0                 // CPU 코어 (0번 코어)
     );
     
-    Serial.println("   ✓ BLE 태스크 생성 완료");
-    Serial.println("\n준비 완료! BLE 연결을 기다립니다...\n");
+    DEBUG_PRINTLN("   ✓ BLE 태스크 생성 완료");
+    DEBUG_PRINTLN("\n준비 완료! BLE 연결을 기다립니다...\n");
 }
 
 void loop() {
