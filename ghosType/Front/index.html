@@ -949,6 +949,10 @@
             const protocolInfo = document.getElementById('protocolInfo');
             const text = input.value;
             
+            // 디버깅: 미리보기 업데이트 시 텍스트 확인
+            console.log('updateConversionPreview 호출, 텍스트:', JSON.stringify(text));
+            console.log('미리보기 텍스트에 엔터키 있나?', text.includes('\n'));
+            
             if (!text) {
                 preview.className = 'conversion-preview';
                 previewText.textContent = '메시지를 입력하면 변환 결과가 여기에 표시됩니다';
@@ -1072,8 +1076,16 @@
             const textarea = document.getElementById('messageModalTextarea');
             const input = document.getElementById('messageInput');
             
+            // 디버깅: 텍스트가 제대로 복사되는지 확인
+            console.log('팝업 텍스트:', JSON.stringify(textarea.value));
+            console.log('팝업 텍스트에 엔터키 있나?', textarea.value.includes('\n'));
+            
             // Copy value back to input
             input.value = textarea.value;
+            
+            console.log('메인 입력창 텍스트:', JSON.stringify(input.value));
+            console.log('메인 입력창에 엔터키 있나?', input.value.includes('\n'));
+            
             updateConversionPreview();
             closeMessageModal();
         }
