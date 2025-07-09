@@ -1397,14 +1397,21 @@
                 const encoder = new TextEncoder();
                 const data = encoder.encode(message);
                 
-                console.log('인코딩된 데이터:', data);
                 console.log('인코딩된 데이터 길이:', data.length);
                 
+                // 데이터 크기 체크 및 전송
+                if (data.length > 2000) {
+                    addLog(`⚠️ 텍스트가 너무 깁니다 (${data.length}바이트). 2000바이트 이하로 줄여주세요.`, 'error');
+                    return false;
+                }
+                
                 await rxCharacteristic.writeValue(data);
-                addLog(`📤 프로토콜 전송: "${message}"`, 'success');
+                addLog(`📤 프로토콜 전송 (${data.length}바이트): "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`, 'success');
+                
                 return true;
             } catch (error) {
                 addLog(`❌ 전송 실패: ${error.message}`, 'error');
+                console.error('전송 에러:', error);
                 return false;
             }
         }

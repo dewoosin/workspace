@@ -76,6 +76,18 @@ class MyCallbacks: public BLECharacteristicCallbacks {
             DEBUG_PRINT("BLE 수신 (길이: ");
             DEBUG_PRINT(rxValue.length());
             DEBUG_PRINT("): ");
+            
+            // 메모리 상태 체크
+            DEBUG_PRINT("남은 힙 메모리: ");
+            DEBUG_PRINT(ESP.getFreeHeap());
+            DEBUG_PRINTLN(" bytes");
+            
+            // 너무 긴 텍스트는 거부
+            if (rxValue.length() > 2000) {
+                DEBUG_PRINTLN("텍스트가 너무 깁니다! 2000바이트 이하로 제한됩니다.");
+                return;
+            }
+            
             DEBUG_PRINTLN(rxValue.c_str());
             
             // 수신 데이터의 각 바이트를 확인
@@ -124,7 +136,7 @@ void processTypingQueue() {
             
             // JSON 파싱 시도
             if (text.startsWith("{")) {
-                StaticJsonDocument<512> doc;
+                StaticJsonDocument<2048> doc; // 크기를 4배로 증가
                 DeserializationError error = deserializeJson(doc, text);
                 
                 if (!error && doc.containsKey("text")) {
@@ -252,8 +264,8 @@ void bleTask(void * parameter) {
     // BLE 초기화 - JavaScript와 일치
     BLEDevice::init("GHOSTYPE");
     
-    // MTU 크기 설정 (기본값보다 작게 설정)
-    BLEDevice::setMTU(185);
+    // MTU 크기 설정 (큰 텍스트 지원을 위해 증가)
+    BLEDevice::setMTU(512);
     
     // 보안 비활성화
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_NO_BOND;
