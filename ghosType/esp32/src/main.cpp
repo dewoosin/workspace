@@ -15,6 +15,7 @@
 #include <BLE2902.h>
 #include <esp_gap_ble_api.h>
 #include <queue>
+#include <ArduinoJson.h>
 
 // HID 키보드 객체
 USBHIDKeyboard keyboard;
@@ -94,21 +95,72 @@ void processTypingQueue() {
             Serial.print("타이핑 시작: ");
             Serial.println(text);
             
-            // 텍스트 파싱 및 타이핑
-            if (text.startsWith("GHTYPE_KOR:")) {
-                text = text.substring(11);
-            } else if (text.startsWith("GHTYPE_ENG:")) {
-                text = text.substring(11);
+            // JSON 또는 일반 텍스트 파싱
+            String textToType = "";
+            int speed_cps = 6;
+            
+            // JSON 파싱 시도
+            if (text.startsWith("{")) {
+                StaticJsonDocument<512> doc;
+                DeserializationError error = deserializeJson(doc, text);
+                
+                if (!error && doc.containsKey("text")) {
+                    textToType = doc["text"].as<String>();
+                    if (doc.containsKey("speed_cps")) {
+                        speed_cps = doc["speed_cps"];
+                    }
+                } else {
+                    textToType = text; // JSON 파싱 실패시 원본 텍스트 사용
+                }
+            } else if (text.startsWith("GHTYPE_")) {
+                // 레거시 형식 지원
+                if (text.startsWith("GHTYPE_KOR:")) {
+                    textToType = text.substring(11);
+                } else if (text.startsWith("GHTYPE_ENG:")) {
+                    textToType = text.substring(11);
+                } else if (text.startsWith("GHTYPE_SPE:haneng")) {
+                    // 한영 전환 - Alt+Shift 조합
+                    keyboard.press(KEY_LEFT_ALT);
+                    delay(10);
+                    keyboard.press(KEY_LEFT_SHIFT);
+                    delay(10);
+                    keyboard.release(KEY_LEFT_SHIFT);
+                    keyboard.release(KEY_LEFT_ALT);
+                    delay(50);
+                    textToType = ""; // 타이핑할 텍스트 없음
+                } else {
+                    textToType = text;
+                }
+            } else {
+                textToType = text; // 일반 텍스트
             }
             
             // 실제 타이핑
-            for (int i = 0; i < text.length(); i++) {
-                keyboard.write(text[i]);
-                delay(30); // 타이핑 속도 조절
+            if (textToType.length() > 0) {
+                int delay_ms = 1000 / speed_cps; // 속도에 따른 딜레이 계산
+                
+                for (int i = 0; i < textToType.length(); i++) {
+                    char c = textToType[i];
+                    
+                    // 특수 문자 처리
+                    if (c == '\n' || c == '\r') {
+                        // 엔터키
+                        keyboard.press(KEY_RETURN);
+                        delay(10);
+                        keyboard.release(KEY_RETURN);
+                    } else if (c == '\t') {
+                        // 탭키
+                        keyboard.press(KEY_TAB);
+                        delay(10);
+                        keyboard.release(KEY_TAB);
+                    } else {
+                        // 일반 문자
+                        keyboard.write(c);
+                    }
+                    
+                    delay(delay_ms); // 타이핑 속도 조절
+                }
             }
-            
-            // Enter 키
-            keyboard.write(KEY_RETURN);
             
             Serial.println("타이핑 완료!");
             isTyping = false;

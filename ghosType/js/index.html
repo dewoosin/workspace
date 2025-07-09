@@ -226,6 +226,7 @@
         <!-- Send Controls -->
         <div class="controls">
             <button id="sendBtn" class="btn-success" disabled>Send Text</button>
+            <button id="sendWithEnterBtn" class="btn-success" disabled>Send + Enter</button>
             <button id="clearBtn" class="btn-secondary">Clear</button>
         </div>
         
@@ -269,6 +270,7 @@
         const disconnectBtn = document.getElementById('disconnectBtn');
         const textInput = document.getElementById('textInput');
         const sendBtn = document.getElementById('sendBtn');
+        const sendWithEnterBtn = document.getElementById('sendWithEnterBtn');
         const clearBtn = document.getElementById('clearBtn');
         const speedSlider = document.getElementById('speedSlider');
         const speedValue = document.getElementById('speedValue');
@@ -297,6 +299,7 @@
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
                 sendBtn.disabled = false;
+                sendWithEnterBtn.disabled = false;
                 
                 log('Connected successfully!', 'success');
             } catch (error) {
@@ -314,6 +317,7 @@
             connectBtn.disabled = false;
             disconnectBtn.disabled = true;
             sendBtn.disabled = true;
+            sendWithEnterBtn.disabled = true;
             
             log('Disconnected');
         });
@@ -338,6 +342,32 @@
                 log('Send failed: ' + error.message, 'error');
             } finally {
                 sendBtn.disabled = false;
+            }
+        });
+        
+        // Send with Enter button handler
+        sendWithEnterBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                log('Please enter some text', 'error');
+                return;
+            }
+            
+            try {
+                sendWithEnterBtn.disabled = true;
+                const speed = parseInt(speedSlider.value);
+                
+                // Add newline to the text
+                const textWithEnter = text + '\n';
+                
+                log(`Sending text with Enter (${speed} CPS): "${text}"`);
+                await ble.sendText(textWithEnter, { speed_cps: speed });
+                
+                log('Text sent with Enter successfully!', 'success');
+            } catch (error) {
+                log('Send failed: ' + error.message, 'error');
+            } finally {
+                sendWithEnterBtn.disabled = false;
             }
         });
         
