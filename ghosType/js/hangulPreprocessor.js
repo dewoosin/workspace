@@ -286,9 +286,16 @@ class HangulPreprocessor {
                 const isKorean = this.isHangul(char);
                 const isEnglish = this.isAscii(char);
                 
+                // 특수 문자들은 모드 전환 없이 그대로 통과
+                const isSpecialChar = char === '\n' || char === '\r' || char === '\t' || 
+                                    char === ' ' || char.charCodeAt(0) < 32;
+                
                 // Determine the mode for this character
                 let charMode = null;
-                if (isKorean) {
+                if (isSpecialChar) {
+                    // 특수 문자는 현재 모드 유지 (모드 전환 없음)
+                    charMode = currentMode || 'english';
+                } else if (isKorean) {
                     charMode = 'korean';
                 } else if (isEnglish) {
                     charMode = 'english';
@@ -297,8 +304,8 @@ class HangulPreprocessor {
                     charMode = currentMode || 'english';
                 }
                 
-                // Check if we need to switch modes
-                if (currentMode !== null && currentMode !== charMode) {
+                // Check if we need to switch modes (특수 문자는 모드 전환 안함)
+                if (currentMode !== null && currentMode !== charMode && !isSpecialChar) {
                     // Process buffered text before switching
                     if (buffer.length > 0) {
                         if (currentMode === 'korean') {
