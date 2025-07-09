@@ -43,7 +43,7 @@ int globalTypingSpeed = 15; // 웹 기본값과 동일 (selected option)
 // 청크 변수들 제거됨
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
-#define DEBUG_ENABLED false
+#define DEBUG_ENABLED true
 
 // 조건부 시리얼 출력 매크로
 #if DEBUG_ENABLED
@@ -129,19 +129,34 @@ void processTypingQueue() {
             
             // JSON 파싱 시도
             if (text.startsWith("{")) {
+                DEBUG_PRINTLN("=== JSON 파싱 시작 ===");
                 StaticJsonDocument<8192> doc; // 크기를 8KB로 증가
                 DeserializationError error = deserializeJson(doc, text);
                 
-                if (!error && doc.containsKey("text")) {
-                    textToType = doc["text"].as<String>();
-                    if (doc.containsKey("speed_cps")) {
-                        speed_cps = doc["speed_cps"];
-                        globalTypingSpeed = speed_cps; // 전역 속도도 업데이트
-                        DEBUG_PRINT("JSON에서 타이핑 속도 업데이트: ");
-                        DEBUG_PRINTLN(speed_cps);
-                    }
-                } else {
+                DEBUG_PRINT("JSON 파싱 결과: ");
+                if (error) {
+                    DEBUG_PRINT("실패 - ");
+                    DEBUG_PRINTLN(error.c_str());
                     textToType = text; // JSON 파싱 실패시 원본 텍스트 사용
+                } else {
+                    DEBUG_PRINTLN("성공");
+                    
+                    if (doc.containsKey("text")) {
+                        textToType = doc["text"].as<String>();
+                        DEBUG_PRINT("추출된 텍스트: '");
+                        DEBUG_PRINT(textToType);
+                        DEBUG_PRINTLN("'");
+                        
+                        if (doc.containsKey("speed_cps")) {
+                            speed_cps = doc["speed_cps"];
+                            globalTypingSpeed = speed_cps; // 전역 속도도 업데이트
+                            DEBUG_PRINT("JSON에서 타이핑 속도 업데이트: ");
+                            DEBUG_PRINTLN(speed_cps);
+                        }
+                    } else {
+                        DEBUG_PRINTLN("JSON에 'text' 키가 없음");
+                        textToType = text; // text 키가 없으면 원본 사용
+                    }
                 }
             } else if (text.startsWith("GHTYPE_CFG:")) {
                 // 설정 프로토콜 처리

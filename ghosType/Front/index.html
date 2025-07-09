@@ -946,7 +946,7 @@
                 const result = {
                     original: text,
                     converted: jamoKeys,
-                    protocol: JSON.stringify(jsonData),
+                    protocol: jsonData,
                     type: type,
                     description: '한글 자모 키 변환'
                 };
@@ -968,7 +968,7 @@
                 const result = {
                     original: text,
                     converted: text,
-                    protocol: JSON.stringify(jsonData),
+                    protocol: jsonData,
                     type: 'english',
                     description: '영문 직접 입력'
                 };
@@ -1040,7 +1040,7 @@
             }
             
             // 프로토콜 정보도 축약
-            const truncatedProtocol = truncateText(result.protocol, 80);
+            const truncatedProtocol = truncateText(JSON.stringify(result.protocol), 80);
             protocolInfo.textContent = `전송 프로토콜: ${truncatedProtocol}`;
         }
 
@@ -1200,7 +1200,7 @@
             }
             
             // 프로토콜 정보도 축약
-            const truncatedProtocol = truncateText(result.protocol, 100);
+            const truncatedProtocol = truncateText(JSON.stringify(result.protocol), 100);
             protocolInfo.textContent = `전송 프로토콜: ${truncatedProtocol}`;
         }
 
@@ -1240,7 +1240,7 @@
 
             const result = convertTextWithProtocol(message);
             startCountdownWithResult(result, () => {
-                sendData(result.protocol);
+                sendData(JSON.stringify(result.protocol));
                 input.value = '';
                 updateConversionPreview();
             });
@@ -1250,7 +1250,7 @@
         function testText(text) {
             const result = convertTextWithProtocol(text);
             startCountdownWithResult(result, () => {
-                sendData(result.protocol);
+                sendData(JSON.stringify(result.protocol));
             });
         }
 
