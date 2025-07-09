@@ -46,7 +46,7 @@ bool isReceivingChunks = false;
 unsigned long chunkStartTime = 0;
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
-#define DEBUG_ENABLED false
+#define DEBUG_ENABLED true
 
 // 조건부 시리얼 출력 매크로
 #if DEBUG_ENABLED
@@ -238,8 +238,10 @@ void processTypingQueue() {
             if (textToType.length() > 0) {
                 int delay_ms = 1000 / speed_cps; // 속도에 따른 딜레이 계산
                 
-                DEBUG_PRINT("타이핑할 텍스트: ");
-                DEBUG_PRINTLN(textToType);
+                DEBUG_PRINT("=== 타이핑 시작 ===");
+                DEBUG_PRINT("타이핑할 텍스트: '");
+                DEBUG_PRINT(textToType);
+                DEBUG_PRINTLN("'");
                 DEBUG_PRINT("텍스트 길이: ");
                 DEBUG_PRINTLN(textToType.length());
                 DEBUG_PRINT("타이핑 속도: ");
@@ -247,6 +249,7 @@ void processTypingQueue() {
                 DEBUG_PRINT(" CPS, 딜레이: ");
                 DEBUG_PRINT(delay_ms);
                 DEBUG_PRINTLN("ms");
+                DEBUG_PRINTLN("=== 문자별 처리 시작 ===");
                 
                 for (int i = 0; i < textToType.length(); i++) {
                     char c = textToType[i];
