@@ -131,11 +131,19 @@ class MyCallbacks: public BLECharacteristicCallbacks {
                 return;
             } else if (isReceivingChunks) {
                 // 중간 청크 - 버퍼에 추가
+                size_t freeHeap = ESP.getFreeHeap();
+                if (freeHeap < 50000) { // 50KB 미만이면 경고
+                    DEBUG_PRINTLN("경고: 메모리 부족으로 청크 수신 중단");
+                    isReceivingChunks = false;
+                    chunkBuffer = "";
+                    return;
+                }
+                
                 chunkBuffer += receivedText;
                 DEBUG_PRINT("청크 추가, 현재 길이: ");
                 DEBUG_PRINT(chunkBuffer.length());
                 DEBUG_PRINT("바이트, 남은 힙: ");
-                DEBUG_PRINT(ESP.getFreeHeap());
+                DEBUG_PRINT(freeHeap);
                 DEBUG_PRINTLN(" bytes");
                 return; // 아직 완전하지 않으므로 큐에 추가하지 않음
             }
@@ -307,8 +315,8 @@ void bleTask(void * parameter) {
     // BLE 초기화 - JavaScript와 일치
     BLEDevice::init("GHOSTYPE");
     
-    // MTU 크기 설정 (큰 텍스트 지원을 위해 증가)
-    BLEDevice::setMTU(512);
+    // MTU 크기 설정 (안정성을 위해 적절한 크기로 조정)
+    BLEDevice::setMTU(247); // 안정성과 호환성을 위해 247로 설정
     
     // 보안 비활성화
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_NO_BOND;

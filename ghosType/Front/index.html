@@ -1399,6 +1399,12 @@
                 return false;
             }
 
+            // BLE 연결 상태 확인
+            if (!device || !device.gatt.connected) {
+                addLog('❌ BLE 연결이 끊어졌습니다', 'error');
+                return false;
+            }
+
             console.log('sendData 호출, 메시지:', JSON.stringify(message));
             console.log('전송할 메시지에 엔터키 있나?', message.includes('\n'));
 
@@ -1450,21 +1456,59 @@
                             dataOffset += MAX_CHUNK_SIZE;
                         }
                         
-                        await rxCharacteristic.writeValue(chunk);
+                        // 청크 전송 재시도 로직
+                        let retryCount = 0;
+                        const maxRetries = 3;
                         
-                        // 진행 상황 표시
-                        const progress = Math.round((chunkIndex + 1) / totalChunks * 100);
-                        console.log(`청크 ${chunkIndex + 1}/${totalChunks} 전송 (${progress}%): ${chunk.length}바이트`);
+                        while (retryCount < maxRetries) {
+                            try {
+                                await rxCharacteristic.writeValue(chunk);
+                                
+                                // 진행 상황 표시
+                                const progress = Math.round((chunkIndex + 1) / totalChunks * 100);
+                                console.log(`청크 ${chunkIndex + 1}/${totalChunks} 전송 (${progress}%): ${chunk.length}바이트`);
+                                
+                                break; // 성공시 루프 종료
+                            } catch (chunkError) {
+                                retryCount++;
+                                console.warn(`청크 ${chunkIndex + 1} 전송 실패 (${retryCount}/${maxRetries}):`, chunkError.message);
+                                
+                                if (retryCount >= maxRetries) {
+                                    throw new Error(`청크 ${chunkIndex + 1} 전송 실패: ${chunkError.message}`);
+                                }
+                                
+                                // 재시도 전 더 긴 딜레이
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+                        }
                         
                         chunkIndex++;
                         
-                        // 청크 간 딜레이 단축 (더 빠른 전송)
-                        await new Promise(resolve => setTimeout(resolve, 50));
+                        // 청크 간 딜레이 증가 (BLE 안정성 향상)
+                        await new Promise(resolve => setTimeout(resolve, 150));
                     }
                     
-                    // 전송 완료 마커
+                    // 전송 완료 마커 (재시도 로직 포함)
                     const endMarker = encoder.encode("CHUNK_END");
-                    await rxCharacteristic.writeValue(endMarker);
+                    let endMarkerRetryCount = 0;
+                    const endMarkerMaxRetries = 3;
+                    
+                    while (endMarkerRetryCount < endMarkerMaxRetries) {
+                        try {
+                            await rxCharacteristic.writeValue(endMarker);
+                            console.log('CHUNK_END 마커 전송 성공');
+                            break;
+                        } catch (endError) {
+                            endMarkerRetryCount++;
+                            console.warn(`CHUNK_END 마커 전송 실패 (${endMarkerRetryCount}/${endMarkerMaxRetries}):`, endError.message);
+                            
+                            if (endMarkerRetryCount >= endMarkerMaxRetries) {
+                                throw new Error(`CHUNK_END 마커 전송 실패: ${endError.message}`);
+                            }
+                            
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                    }
                     
                     addLog(`📤 분할 전송 완료: ${totalChunks}개 청크 (${data.length}바이트)`, 'success');
                 }
