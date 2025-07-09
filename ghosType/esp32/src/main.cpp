@@ -42,8 +42,8 @@ int globalTypingSpeed = 15; // 웹 기본값과 동일 (selected option)
 
 // 청크 변수들 제거됨
 
-// 디버깅 플래그 (디버깅 시에만 true로 설정)
-#define DEBUG_ENABLED true
+// 디버깅 플래그 (디버깅 시에만 true로 설정)  
+#define DEBUG_ENABLED false
 
 // 조건부 시리얼 출력 매크로
 #if DEBUG_ENABLED
