@@ -615,9 +615,10 @@
         <div class="typing-speed-control" role="group" aria-label="타이핑 속도 설정">
             <label for="typingSpeed">⚡ Typing Speed (chars/sec):</label>
             <select id="typingSpeed" onchange="updateTypingSpeed()" aria-label="타이핑 속도 선택">
-                <option value="3">3 (Slow)</option>
-                <option value="6" selected>6 (Normal)</option>
-                <option value="10">10 (Fast)</option>
+                <option value="8">8 (Slow)</option>
+                <option value="10" selected>10 (Normal)</option>
+                <option value="13">13 (Fast)</option>
+                <option value="15">15 (Very Fast)</option>
             </select>
         </div>
 
@@ -743,7 +744,7 @@
         let txCharacteristic = null;
         let countdownTimer = null;
         let countdownPending = null;
-        let currentTypingSpeed = 6; // Default typing speed in characters per second
+        let currentTypingSpeed = 10; // Default typing speed in characters per second
 
         // ===== 한글 → 자모 키 변환 로직 =====
 

@@ -38,7 +38,7 @@ SemaphoreHandle_t queueMutex;
 // 타이핑 상태
 bool isTyping = false;
 unsigned long lastTypeTime = 0;
-int globalTypingSpeed = 6; // 웹 기본값과 동일 (selected option)
+int globalTypingSpeed = 10; // 웹 기본값과 동일 (selected option)
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
 #define DEBUG_ENABLED true
