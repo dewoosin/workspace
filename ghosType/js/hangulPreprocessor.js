@@ -256,6 +256,9 @@ class HangulPreprocessor {
             return '';
         }
         
+        // 디버깅: 입력에 엔터키 있는지 확인
+        console.log('processText 입력에 엔터키 있나?', input.includes('\n'), input.includes('\r'));
+        
         // 최대 길이 제한
         const MAX_INPUT_LENGTH = 100000;
         if (input.length > MAX_INPUT_LENGTH) {
@@ -344,6 +347,9 @@ class HangulPreprocessor {
             return input; // 실패 시 원본 반환
         }
         
+        // 디버깅: 최종 결과에 엔터키 있는지 확인
+        console.log('processText 결과에 엔터키 있나?', result.includes('\n'), result.includes('\r'));
+        
         return result;
     }
     
@@ -352,8 +358,14 @@ class HangulPreprocessor {
      * ESP32 HID 타이핑을 위한 언어 감지를 포함한 입력 포맷
      */
     formatForESP32(input) {
+        // 디버깅: 입력 텍스트 확인
+        console.log('formatForESP32 입력:', JSON.stringify(input));
+        
         // Process the text with automatic language switching
         const processed = this.processText(input);
+        
+        // 디버깅: 처리된 텍스트 확인
+        console.log('processText 결과:', JSON.stringify(processed));
         
         // Return formatted data for ESP32
         return {
