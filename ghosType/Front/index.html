@@ -1288,20 +1288,7 @@
                 updateStatus('🟢 연결됨 - 한글/영문 입력 가능', 'connected');
                 updateUI(true);
 
-                // Send current typing speed configuration
-                setTimeout(() => {
-                    const configData = {
-                        mode: "typing",
-                        speed_cps: currentTypingSpeed
-                    };
-                    const configProtocol = `GHTYPE_CFG:${JSON.stringify(configData)}`;
-                    sendData(configProtocol);
-                }, 500);
-
-                // 환영 메시지 (한글 테스트)
-                setTimeout(() => {
-                    testText('🌐 웹 브라우저에서 연결되었습니다!');
-                }, 1500);
+                // 자동 전송 제거됨 - 사용자가 필요할 때만 수동으로 전송
 
             } catch (error) {
                 addLog(`❌ 연결 실패: ${error.message}`, 'error');
