@@ -134,6 +134,18 @@ void processTypingQueue() {
                 } else {
                     textToType = text; // JSON 파싱 실패시 원본 텍스트 사용
                 }
+            } else if (text.startsWith("GHTYPE_CFG:")) {
+                // 설정 프로토콜 처리
+                String configJson = text.substring(11);
+                StaticJsonDocument<256> configDoc;
+                DeserializationError configError = deserializeJson(configDoc, configJson);
+                
+                if (!configError && configDoc.containsKey("speed_cps")) {
+                    speed_cps = configDoc["speed_cps"];
+                    DEBUG_PRINT("타이핑 속도 설정: ");
+                    DEBUG_PRINTLN(speed_cps);
+                }
+                textToType = ""; // 설정만 처리하고 타이핑 없음
             } else if (text.startsWith("GHTYPE_")) {
                 // 레거시 형식 지원
                 if (text.startsWith("GHTYPE_KOR:")) {
@@ -165,6 +177,11 @@ void processTypingQueue() {
                 DEBUG_PRINTLN(textToType);
                 DEBUG_PRINT("텍스트 길이: ");
                 DEBUG_PRINTLN(textToType.length());
+                DEBUG_PRINT("타이핑 속도: ");
+                DEBUG_PRINT(speed_cps);
+                DEBUG_PRINT(" CPS, 딜레이: ");
+                DEBUG_PRINT(delay_ms);
+                DEBUG_PRINTLN("ms");
                 
                 for (int i = 0; i < textToType.length(); i++) {
                     char c = textToType[i];
@@ -189,31 +206,38 @@ void processTypingQueue() {
                     
                     // 특수 문자 처리
                     if (c == '\n' || c == '\r') {
-                        // 엔터키
+                        // 엔터키 - 더 많은 딜레이 추가
                         DEBUG_PRINTLN("엔터키 입력!");
-                        delay(20); // 엔터키 전 딜레이
+                        delay(50); // 엔터키 전 딜레이 증가
                         keyboard.press(KEY_RETURN);
-                        delay(30); // 엔터키 누름 딜레이 증가
+                        delay(100); // 엔터키 누름 딜레이 대폭 증가
                         keyboard.release(KEY_RETURN);
-                        delay(50); // 엔터키 후 딜레이 추가
+                        delay(100); // 엔터키 후 딜레이 대폭 증가
                     } else if (c == '\t') {
                         // 탭키
                         DEBUG_PRINTLN("탭키 입력!");
                         keyboard.press(KEY_TAB);
-                        delay(20);
+                        delay(50);
                         keyboard.release(KEY_TAB);
+                        delay(50);
                     } else {
                         // 일반 문자
                         keyboard.write(c);
+                        delay(delay_ms); // 타이핑 속도 조절
                     }
-                    
-                    delay(delay_ms); // 타이핑 속도 조절
                 }
             }
             
             DEBUG_PRINTLN("타이핑 완료!");
             isTyping = false;
             lastTypeTime = millis();
+            
+            // 완료 응답 전송
+            if (pTxCharacteristic && deviceConnected) {
+                String response = "OK:Typing completed";
+                pTxCharacteristic->setValue(response.c_str());
+                pTxCharacteristic->notify();
+            }
             
         } else {
             xSemaphoreGive(queueMutex);
