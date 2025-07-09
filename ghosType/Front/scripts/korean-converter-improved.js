@@ -181,8 +181,14 @@ export function convertHangulToJamoKeys(text) {
                     }
                 }
             } else {
-                // Non-Hangul character - pass through
-                result += char;
+                // Check if it's a single jamo character
+                const qwertyKey = jamoToQwerty(char);
+                if (qwertyKey) {
+                    result += qwertyKey;
+                } else {
+                    // Non-Hangul character - pass through
+                    result += char;
+                }
             }
         } catch (error) {
             console.error(`Error processing character '${char}' at position ${i}:`, error);
