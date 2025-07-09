@@ -60,6 +60,6 @@ export const QWERTY_TO_JAMO = {
 
 // Default Configuration
 export const DEFAULT_CONFIG = {
-    TYPING_SPEED: 10,
+    TYPING_SPEED: 15,
     COUNTDOWN_SECONDS: 5
 };

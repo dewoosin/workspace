@@ -38,7 +38,7 @@ SemaphoreHandle_t queueMutex;
 // 타이핑 상태
 bool isTyping = false;
 unsigned long lastTypeTime = 0;
-int globalTypingSpeed = 10; // 웹 기본값과 동일 (selected option)
+int globalTypingSpeed = 15; // 웹 기본값과 동일 (selected option)
 
 // 청크 재조립을 위한 변수들 (큰 데이터 지원)
 String chunkBuffer = "";
@@ -183,6 +183,9 @@ void processTypingQueue() {
                     textToType = doc["text"].as<String>();
                     if (doc.containsKey("speed_cps")) {
                         speed_cps = doc["speed_cps"];
+                        globalTypingSpeed = speed_cps; // 전역 속도도 업데이트
+                        DEBUG_PRINT("JSON에서 타이핑 속도 업데이트: ");
+                        DEBUG_PRINTLN(speed_cps);
                     }
                 } else {
                     textToType = text; // JSON 파싱 실패시 원본 텍스트 사용

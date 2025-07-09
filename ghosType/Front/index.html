@@ -633,12 +633,12 @@
         <div class="typing-speed-control" role="group" aria-label="타이핑 속도 설정">
             <label for="typingSpeed">⚡ Typing Speed (chars/sec):</label>
             <select id="typingSpeed" onchange="updateTypingSpeed()" aria-label="타이핑 속도 선택">
-                <option value="8">8 (Slow)</option>
-                <option value="10" selected>10 (Normal)</option>
-                <option value="13">13 (Fast)</option>
-                <option value="15">15 (Very Fast)</option>
-                <option value="18">18 (Ultra Fast)</option>
-                <option value="20">20 (Max Speed)</option>
+                <option value="13">13 (Slow)</option>
+                <option value="15" selected>15 (Normal)</option>
+                <option value="18">18 (Fast)</option>
+                <option value="20">20 (Very Fast)</option>
+                <option value="25">25 (Ultra Fast)</option>
+                <option value="30">30 (Max Speed)</option>
             </select>
         </div>
 
@@ -763,7 +763,7 @@
         let txCharacteristic = null;
         let countdownTimer = null;
         let countdownPending = null;
-        let currentTypingSpeed = 10; // Default typing speed in characters per second
+        let currentTypingSpeed = 15; // Default typing speed in characters per second
 
         // ===== 한글 → 자모 키 변환 로직 =====
 
@@ -940,6 +940,8 @@
                     speed_cps: currentTypingSpeed,
                     type: 'korean'
                 };
+                console.log('한글 JSON 생성:', jsonData);
+                console.log('현재 타이핑 속도:', currentTypingSpeed);
                 
                 const result = {
                     original: text,
@@ -960,6 +962,8 @@
                     speed_cps: currentTypingSpeed,
                     type: 'english'
                 };
+                console.log('영문 JSON 생성:', jsonData);
+                console.log('현재 타이핑 속도:', currentTypingSpeed);
                 
                 const result = {
                     original: text,
@@ -1078,7 +1082,10 @@
         // Typing Speed Control
         function updateTypingSpeed() {
             const speedSelect = document.getElementById('typingSpeed');
-            currentTypingSpeed = parseInt(speedSelect.value);
+            const newSpeed = parseInt(speedSelect.value);
+            
+            console.log('타이핑 속도 변경:', currentTypingSpeed, '→', newSpeed);
+            currentTypingSpeed = newSpeed;
             
             // Save to localStorage
             localStorage.setItem('ghostype_typing_speed', currentTypingSpeed);
@@ -1090,6 +1097,8 @@
                     speed_cps: currentTypingSpeed
                 };
                 const configProtocol = `GHTYPE_CFG:${JSON.stringify(configData)}`;
+                
+                console.log('속도 설정 전송:', configProtocol);
                 
                 sendData(configProtocol).then(success => {
                     if (success) {
