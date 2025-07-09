@@ -46,7 +46,7 @@ bool isReceivingChunks = false;
 unsigned long chunkStartTime = 0;
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
-#define DEBUG_ENABLED true
+#define DEBUG_ENABLED false
 
 // 조건부 시리얼 출력 매크로
 #if DEBUG_ENABLED
