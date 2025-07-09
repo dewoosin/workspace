@@ -126,24 +126,34 @@ export class UIController {
         const type = analysis.type || analysis; // Handle both old and new format
         
         if (type === 'korean' || type === 'mixed') {
-            // 한글이 포함된 경우: 자모 키로 변환 후 한글 프로토콜
+            // 한글이 포함된 경우: 자모 키로 변환 후 JSON 형태로 전송
             const jamoKeys = convertHangulToJamoKeys(text);
             console.log('jamoKeys 변환 결과:', JSON.stringify(jamoKeys));
             console.log('변환 후 엔터키 포함?', jamoKeys.includes('\n'));
+            const jsonData = {
+                text: jamoKeys,
+                speed_cps: this.currentTypingSpeed,
+                type: 'korean'
+            };
             return {
                 original: text,
                 converted: jamoKeys,
-                protocol: `${PROTOCOLS.KOREAN}${jamoKeys}`,
+                protocol: JSON.stringify(jsonData),
                 type: type,
                 description: '한글 자모 키 변환'
             };
         } else {
-            // 순수 영문인 경우: 영문 프로토콜
+            // 순수 영문인 경우: JSON 형태로 전송
             console.log('영문 처리, 엔터키 포함?', text.includes('\n'));
+            const jsonData = {
+                text: text,
+                speed_cps: this.currentTypingSpeed,
+                type: 'english'
+            };
             return {
                 original: text,
                 converted: text,
-                protocol: `${PROTOCOLS.ENGLISH}${text}`,
+                protocol: JSON.stringify(jsonData),
                 type: 'english',
                 description: '영문 직접 입력'
             };

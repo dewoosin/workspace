@@ -38,6 +38,7 @@ SemaphoreHandle_t queueMutex;
 // 타이핑 상태
 bool isTyping = false;
 unsigned long lastTypeTime = 0;
+int globalTypingSpeed = 6; // 웹 기본값과 동일 (selected option)
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
 #define DEBUG_ENABLED true
@@ -119,7 +120,7 @@ void processTypingQueue() {
             
             // JSON 또는 일반 텍스트 파싱
             String textToType = "";
-            int speed_cps = 4; // 기본 속도를 더 느리게
+            int speed_cps = globalTypingSpeed; // 웹에서 전달받은 속도만 사용
             
             // JSON 파싱 시도
             if (text.startsWith("{")) {
@@ -141,9 +142,10 @@ void processTypingQueue() {
                 DeserializationError configError = deserializeJson(configDoc, configJson);
                 
                 if (!configError && configDoc.containsKey("speed_cps")) {
-                    speed_cps = configDoc["speed_cps"];
+                    globalTypingSpeed = configDoc["speed_cps"];
+                    speed_cps = globalTypingSpeed;
                     DEBUG_PRINT("타이핑 속도 설정: ");
-                    DEBUG_PRINTLN(speed_cps);
+                    DEBUG_PRINTLN(globalTypingSpeed);
                 }
                 textToType = ""; // 설정만 처리하고 타이핑 없음
             } else if (text.startsWith("GHTYPE_")) {
