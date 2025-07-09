@@ -40,7 +40,7 @@ bool isTyping = false;
 unsigned long lastTypeTime = 0;
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
-#define DEBUG_ENABLED false
+#define DEBUG_ENABLED true
 
 // 조건부 시리얼 출력 매크로
 #if DEBUG_ENABLED
@@ -72,8 +72,18 @@ class MyCallbacks: public BLECharacteristicCallbacks {
         std::string rxValue = pCharacteristic->getValue();
         
         if (rxValue.length() > 0) {
-            DEBUG_PRINT("BLE 수신: ");
+            DEBUG_PRINT("BLE 수신 (길이: ");
+            DEBUG_PRINT(rxValue.length());
+            DEBUG_PRINT("): ");
             DEBUG_PRINTLN(rxValue.c_str());
+            
+            // 수신 데이터의 각 바이트를 확인
+            DEBUG_PRINT("수신 바이트: ");
+            for (size_t i = 0; i < rxValue.length(); i++) {
+                DEBUG_PRINT((int)rxValue[i]);
+                DEBUG_PRINT(" ");
+            }
+            DEBUG_PRINTLN();
             
             // 뮤텍스로 큐 보호
             if (xSemaphoreTake(queueMutex, portMAX_DELAY) == pdTRUE) {
@@ -109,7 +119,7 @@ void processTypingQueue() {
             
             // JSON 또는 일반 텍스트 파싱
             String textToType = "";
-            int speed_cps = 6;
+            int speed_cps = 4; // 기본 속도를 더 느리게
             
             // JSON 파싱 시도
             if (text.startsWith("{")) {
@@ -181,14 +191,16 @@ void processTypingQueue() {
                     if (c == '\n' || c == '\r') {
                         // 엔터키
                         DEBUG_PRINTLN("엔터키 입력!");
+                        delay(20); // 엔터키 전 딜레이
                         keyboard.press(KEY_RETURN);
-                        delay(10);
+                        delay(30); // 엔터키 누름 딜레이 증가
                         keyboard.release(KEY_RETURN);
+                        delay(50); // 엔터키 후 딜레이 추가
                     } else if (c == '\t') {
                         // 탭키
                         DEBUG_PRINTLN("탭키 입력!");
                         keyboard.press(KEY_TAB);
-                        delay(10);
+                        delay(20);
                         keyboard.release(KEY_TAB);
                     } else {
                         // 일반 문자
@@ -213,6 +225,9 @@ void processTypingQueue() {
 void bleTask(void * parameter) {
     // BLE 초기화 - JavaScript와 일치
     BLEDevice::init("GHOSTYPE");
+    
+    // MTU 크기 설정 (기본값보다 작게 설정)
+    BLEDevice::setMTU(185);
     
     // 보안 비활성화
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_NO_BOND;

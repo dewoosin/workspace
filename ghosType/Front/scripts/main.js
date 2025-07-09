@@ -79,20 +79,7 @@ window.connectDevice = async function() {
     const connected = await bleManager.connect();
     
     if (connected) {
-        // Send current typing speed configuration
-        setTimeout(() => {
-            const configData = {
-                mode: "typing",
-                speed_cps: uiController.currentTypingSpeed
-            };
-            const configProtocol = `${PROTOCOLS.CONFIG}${JSON.stringify(configData)}`;
-            bleManager.sendData(configProtocol);
-        }, 500);
-
-        // Welcome message
-        setTimeout(() => {
-            uiController.testText('🌐 웹 브라우저에서 연결되었습니다!');
-        }, 1500);
+        // 자동 전송 제거 - 사용자가 필요할 때만 전송
     }
 };
 
