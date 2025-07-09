@@ -40,6 +40,10 @@ bool isTyping = false;
 unsigned long lastTypeTime = 0;
 int globalTypingSpeed = 10; // 웹 기본값과 동일 (selected option)
 
+// 청크 재조립을 위한 변수들
+String chunkBuffer = "";
+bool isReceivingChunks = false;
+
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
 #define DEBUG_ENABLED true
 
@@ -88,23 +92,47 @@ class MyCallbacks: public BLECharacteristicCallbacks {
                 return;
             }
             
-            DEBUG_PRINTLN(rxValue.c_str());
+            String receivedText = String(rxValue.c_str());
+            DEBUG_PRINTLN(receivedText);
             
-            // 수신 데이터의 각 바이트를 확인
-            DEBUG_PRINT("수신 바이트: ");
-            for (size_t i = 0; i < rxValue.length(); i++) {
-                DEBUG_PRINT((int)rxValue[i]);
-                DEBUG_PRINT(" ");
+            // 청크 처리 로직
+            if (receivedText.startsWith("CHUNK_START:")) {
+                // 청크 시작 - 버퍼 초기화하고 첫 번째 데이터 저장
+                isReceivingChunks = true;
+                chunkBuffer = receivedText.substring(12); // "CHUNK_START:" 제거
+                DEBUG_PRINTLN("청크 수신 시작");
+                return; // 아직 완전하지 않으므로 큐에 추가하지 않음
+            } else if (receivedText == "CHUNK_END") {
+                // 청크 종료 - 완성된 데이터를 큐에 추가
+                if (isReceivingChunks) {
+                    DEBUG_PRINT("청크 수신 완료, 총 길이: ");
+                    DEBUG_PRINTLN(chunkBuffer.length());
+                    
+                    // 완성된 데이터를 큐에 추가
+                    if (xSemaphoreTake(queueMutex, portMAX_DELAY) == pdTRUE) {
+                        typingQueue.push(chunkBuffer);
+                        xSemaphoreGive(queueMutex);
+                        DEBUG_PRINTLN("재조립된 텍스트 큐에 추가됨");
+                    }
+                    
+                    // 상태 리셋
+                    isReceivingChunks = false;
+                    chunkBuffer = "";
+                }
+                return;
+            } else if (isReceivingChunks) {
+                // 중간 청크 - 버퍼에 추가
+                chunkBuffer += receivedText;
+                DEBUG_PRINT("청크 추가, 현재 길이: ");
+                DEBUG_PRINTLN(chunkBuffer.length());
+                return; // 아직 완전하지 않으므로 큐에 추가하지 않음
             }
-            DEBUG_PRINTLN();
             
-            // 뮤텍스로 큐 보호
+            // 일반 데이터 (청크가 아닌 경우) - 직접 큐에 추가
             if (xSemaphoreTake(queueMutex, portMAX_DELAY) == pdTRUE) {
-                // 받은 텍스트를 큐에 추가
-                typingQueue.push(String(rxValue.c_str()));
+                typingQueue.push(receivedText);
                 xSemaphoreGive(queueMutex);
-                
-                DEBUG_PRINTLN("텍스트 큐에 추가됨");
+                DEBUG_PRINTLN("일반 텍스트 큐에 추가됨");
             }
             
             // 응답 전송

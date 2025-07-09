@@ -1399,14 +1399,62 @@
                 
                 console.log('인코딩된 데이터 길이:', data.length);
                 
-                // 데이터 크기 체크 및 전송
+                // BLE writeValue는 512바이트로 제한됨 - 청크로 분할 전송
+                const MAX_CHUNK_SIZE = 500; // 안전마진을 위해 500바이트로 제한
+                
                 if (data.length > 2000) {
                     addLog(`⚠️ 텍스트가 너무 깁니다 (${data.length}바이트). 2000바이트 이하로 줄여주세요.`, 'error');
                     return false;
                 }
                 
-                await rxCharacteristic.writeValue(data);
-                addLog(`📤 프로토콜 전송 (${data.length}바이트): "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`, 'success');
+                if (data.length <= MAX_CHUNK_SIZE) {
+                    // 작은 데이터는 한 번에 전송
+                    await rxCharacteristic.writeValue(data);
+                    addLog(`📤 프로토콜 전송 (${data.length}바이트): "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`, 'success');
+                } else {
+                    // 큰 데이터는 청크로 분할 전송
+                    addLog(`📤 큰 데이터를 청크로 분할 전송 (총 ${data.length}바이트)`, 'info');
+                    
+                    // 첫 번째 청크에 특별한 헤더 추가로 ESP32에게 분할 전송임을 알림
+                    const firstChunkHeader = "CHUNK_START:";
+                    const headerBytes = encoder.encode(firstChunkHeader);
+                    
+                    let chunkIndex = 0;
+                    let dataOffset = 0;
+                    
+                    while (dataOffset < data.length) {
+                        let chunk;
+                        
+                        if (chunkIndex === 0) {
+                            // 첫 번째 청크: 헤더 + 데이터
+                            const availableSpace = MAX_CHUNK_SIZE - headerBytes.length;
+                            const dataChunk = data.slice(dataOffset, dataOffset + availableSpace);
+                            chunk = new Uint8Array(headerBytes.length + dataChunk.length);
+                            chunk.set(headerBytes, 0);
+                            chunk.set(dataChunk, headerBytes.length);
+                            dataOffset += availableSpace;
+                        } else {
+                            // 이후 청크들: 데이터만
+                            const dataChunk = data.slice(dataOffset, dataOffset + MAX_CHUNK_SIZE);
+                            chunk = dataChunk;
+                            dataOffset += MAX_CHUNK_SIZE;
+                        }
+                        
+                        await rxCharacteristic.writeValue(chunk);
+                        console.log(`청크 ${chunkIndex + 1} 전송: ${chunk.length}바이트`);
+                        
+                        chunkIndex++;
+                        
+                        // 청크 간 딜레이
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                    // 전송 완료 마커
+                    const endMarker = encoder.encode("CHUNK_END");
+                    await rxCharacteristic.writeValue(endMarker);
+                    
+                    addLog(`📤 분할 전송 완료: ${Math.ceil(data.length/MAX_CHUNK_SIZE)}개 청크`, 'success');
+                }
                 
                 return true;
             } catch (error) {
