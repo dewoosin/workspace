@@ -349,6 +349,24 @@
             animation: modalSlide 0.3s ease-out;
         }
 
+        .countdown-instruction {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .countdown-instruction p {
+            margin: 10px 0;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .countdown-instruction strong {
+            color: #333;
+        }
+
         @keyframes modalSlide {
             from {
                 transform: translateY(-50px);
@@ -619,6 +637,8 @@
                 <option value="10" selected>10 (Normal)</option>
                 <option value="13">13 (Fast)</option>
                 <option value="15">15 (Very Fast)</option>
+                <option value="18">18 (Ultra Fast)</option>
+                <option value="20">20 (Max Speed)</option>
             </select>
         </div>
 
@@ -641,10 +661,9 @@
                 <h3>⌨️ 키보드 입력 준비</h3>
                 <div class="countdown-number" id="countdownNumber">5</div>
                 <div class="countdown-message" id="countdownMessage">메모장에 커서를 놓고 기다리세요...</div>
-                <div class="countdown-preview" id="countdownPreview">
-                    <strong>원본:</strong> <span id="originalText"></span><br>
-                    <strong>변환:</strong> <span id="convertedText"></span><br>
-                    <strong>프로토콜:</strong> <span id="protocolText"></span>
+                <div class="countdown-instruction">
+                    <p>📝 <strong>중요:</strong> 입력을 받을 화면(메모장, 텍스트 에디터 등)에 커서를 클릭해 두세요!</p>
+                    <p>⏰ 곧 자동 타이핑이 시작됩니다.</p>
                 </div>
                 <button class="cancel-btn" onclick="cancelCountdown()">❌ 취소</button>
             </div>
@@ -1252,14 +1271,8 @@
             const modal = document.getElementById('countdownModal');
             const numberEl = document.getElementById('countdownNumber');
             const messageEl = document.getElementById('countdownMessage');
-            const originalEl = document.getElementById('originalText');
-            const convertedEl = document.getElementById('convertedText');
-            const protocolEl = document.getElementById('protocolText');
             
             modal.style.display = 'flex';
-            originalEl.textContent = result.original;
-            convertedEl.textContent = result.converted;
-            protocolEl.textContent = result.protocol;
             
             let count = 5;
             countdownPending = callback;
