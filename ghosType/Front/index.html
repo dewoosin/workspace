@@ -771,6 +771,17 @@
             JAMO_TO_QWERTY[QWERTY_TO_JAMO[key]] = key;
         });
 
+        // 복합 모음 분해 매핑
+        const COMPOUND_VOWELS = {
+            'ㅘ': ['ㅗ', 'ㅏ'],  // o + a
+            'ㅙ': ['ㅗ', 'ㅐ'],  // o + ae
+            'ㅚ': ['ㅗ', 'ㅣ'],  // o + i
+            'ㅝ': ['ㅜ', 'ㅓ'],  // u + eo
+            'ㅞ': ['ㅜ', 'ㅔ'],  // u + e
+            'ㅟ': ['ㅜ', 'ㅣ'],  // u + i
+            'ㅢ': ['ㅡ', 'ㅣ']   // eu + i
+        };
+
         // 한글 유니코드 분해 함수
         function decomposeHangul(char) {
             const code = char.charCodeAt(0);
@@ -791,8 +802,21 @@
             const jongsung = ['','ㄱ','ㄲ','ㄱㅅ','ㄴ','ㄴㅈ','ㄴㅎ','ㄷ','ㄹ','ㄹㄱ','ㄹㅁ','ㄹㅂ','ㄹㅅ','ㄹㅌ','ㄹㅍ','ㄹㅎ','ㅁ','ㅂ','ㅂㅅ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
             
             const result = [];
+            
+            // 초성 추가
             result.push(chosung[cho]);
-            result.push(jungsung[jung]);
+            
+            // 중성 추가 (복합모음 처리)
+            const jungsungChar = jungsung[jung];
+            if (COMPOUND_VOWELS[jungsungChar]) {
+                // 복합모음인 경우 분해해서 추가
+                result.push(...COMPOUND_VOWELS[jungsungChar]);
+            } else {
+                // 단순모음인 경우 그대로 추가
+                result.push(jungsungChar);
+            }
+            
+            // 종성 추가 (복합자음 처리)
             if (jong > 0) {
                 const jongChar = jongsung[jong];
                 if (jongChar.length === 2) {
@@ -833,11 +857,22 @@
                 if (jamos) {
                     // 한글인 경우 자모로 분해 후 QWERTY 키로 변환
                     for (let jamo of jamos) {
-                        result += jamoToQwerty(jamo);
+                        const qwertyKey = jamoToQwerty(jamo);
+                        if (qwertyKey) {
+                            result += qwertyKey;
+                        } else {
+                            console.warn('매핑되지 않은 자모:', jamo, '(U+' + jamo.charCodeAt(0).toString(16).toUpperCase() + ')');
+                        }
                     }
                 } else {
-                    // 한글이 아닌 경우 그대로
-                    result += char;
+                    // Check if it's a single jamo character (ㅂㅈㄷㄱ 등)
+                    const qwertyKey = jamoToQwerty(char);
+                    if (qwertyKey) {
+                        result += qwertyKey;
+                    } else {
+                        // 한글이 아닌 경우 그대로
+                        result += char;
+                    }
                 }
             }
             
