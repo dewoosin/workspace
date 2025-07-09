@@ -118,12 +118,18 @@ export class UIController {
 
     // Text Conversion
     convertTextWithProtocol(text) {
+        // 디버깅: 입력 텍스트에 엔터키가 있는지 확인
+        console.log('convertTextWithProtocol 입력:', JSON.stringify(text));
+        console.log('엔터키 포함?', text.includes('\n'));
+        
         const analysis = analyzeText(text);
         const type = analysis.type || analysis; // Handle both old and new format
         
         if (type === 'korean' || type === 'mixed') {
             // 한글이 포함된 경우: 자모 키로 변환 후 한글 프로토콜
             const jamoKeys = convertHangulToJamoKeys(text);
+            console.log('jamoKeys 변환 결과:', JSON.stringify(jamoKeys));
+            console.log('변환 후 엔터키 포함?', jamoKeys.includes('\n'));
             return {
                 original: text,
                 converted: jamoKeys,
@@ -133,6 +139,7 @@ export class UIController {
             };
         } else {
             // 순수 영문인 경우: 영문 프로토콜
+            console.log('영문 처리, 엔터키 포함?', text.includes('\n'));
             return {
                 original: text,
                 converted: text,
@@ -163,16 +170,26 @@ export class UIController {
         // 미리보기 스타일 업데이트
         preview.className = `conversion-preview ${result.type}`;
         
-        // 변환 결과 표시
+        // 변환 결과 표시 (엔터키 등 특수 문자 표시)
+        const displayOriginal = result.original
+            .replace(/\n/g, '↵<br>')
+            .replace(/\t/g, '→')
+            .replace(/\r/g, '↓');
+        
+        const displayConverted = result.converted
+            .replace(/\n/g, '↵<br>')
+            .replace(/\t/g, '→')
+            .replace(/\r/g, '↓');
+        
         if (result.type === 'korean' || result.type === 'mixed') {
             previewText.innerHTML = `
-                <strong>원본:</strong> ${result.original}<br>
-                <strong>자모:</strong> ${result.converted}<br>
+                <strong>원본:</strong> ${displayOriginal}<br>
+                <strong>자모:</strong> ${displayConverted}<br>
                 <strong>설명:</strong> ${result.description}
             `;
         } else {
             previewText.innerHTML = `
-                <strong>텍스트:</strong> ${result.original}<br>
+                <strong>텍스트:</strong> ${displayOriginal}<br>
                 <strong>설명:</strong> ${result.description}
             `;
         }
@@ -194,15 +211,26 @@ export class UIController {
         
         const result = this.convertTextWithProtocol(text);
         
+        // 특수 문자 표시 처리
+        const displayOriginal = result.original
+            .replace(/\n/g, '↵<br>')
+            .replace(/\t/g, '→')
+            .replace(/\r/g, '↓');
+        
+        const displayConverted = result.converted
+            .replace(/\n/g, '↵<br>')
+            .replace(/\t/g, '→')
+            .replace(/\r/g, '↓');
+        
         if (result.type === 'korean' || result.type === 'mixed') {
             previewText.innerHTML = `
-                <strong>원본:</strong> ${result.original}<br>
-                <strong>자모:</strong> ${result.converted}<br>
+                <strong>원본:</strong> ${displayOriginal}<br>
+                <strong>자모:</strong> ${displayConverted}<br>
                 <strong>설명:</strong> ${result.description}
             `;
         } else {
             previewText.innerHTML = `
-                <strong>텍스트:</strong> ${result.original}<br>
+                <strong>텍스트:</strong> ${displayOriginal}<br>
                 <strong>설명:</strong> ${result.description}
             `;
         }
