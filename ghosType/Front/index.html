@@ -921,55 +921,147 @@
             return 'unknown';
         }
 
-        // 스마트 텍스트 변환 (프로토콜 포함)
+        // 언어별 텍스트 세그멘테이션
+        function segmentTextByLanguage(text) {
+            const segments = [];
+            let currentSegment = '';
+            let currentLanguage = null;
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const code = char.charCodeAt(0);
+                
+                // 문자 언어 결정
+                let charLanguage;
+                if (code >= 0xAC00 && code <= 0xD7A3) {
+                    // 한글 음절
+                    charLanguage = 'korean';
+                } else if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122) || 
+                          (code >= 32 && code <= 126) || code === 10 || code === 13 || code === 9) {
+                    // 영문자, ASCII 문자, 특수문자 (공백, 개행 등)
+                    charLanguage = 'english';
+                } else {
+                    // 기타 문자는 영문으로 처리
+                    charLanguage = 'english';
+                }
+                
+                // 언어가 바뀌면 현재 세그먼트 저장하고 새로 시작
+                if (currentLanguage !== null && currentLanguage !== charLanguage) {
+                    if (currentSegment.length > 0) {
+                        segments.push({
+                            text: currentSegment,
+                            language: currentLanguage
+                        });
+                    }
+                    currentSegment = char;
+                    currentLanguage = charLanguage;
+                } else {
+                    // 현재 세그먼트 계속
+                    currentSegment += char;
+                    currentLanguage = charLanguage;
+                }
+            }
+            
+            // 마지막 세그먼트 추가
+            if (currentSegment.length > 0) {
+                segments.push({
+                    text: currentSegment,
+                    language: currentLanguage
+                });
+            }
+            
+            return segments;
+        }
+
+        // 블록 기반 프로토콜 생성
+        function generateBlockProtocol(segments) {
+            const protocolBlocks = [];
+            let convertedText = '';
+            let hasKorean = false;
+            
+            for (const segment of segments) {
+                if (segment.language === 'korean') {
+                    hasKorean = true;
+                    // 한글 텍스트를 자모 키로 변환
+                    const jamoKeys = convertHangulToJamoKeys(segment.text);
+                    protocolBlocks.push(`#CMD:HANGUL`);
+                    protocolBlocks.push(`#TEXT:${jamoKeys}`);
+                    convertedText += jamoKeys;
+                } else {
+                    // 영문 텍스트는 원본 유지
+                    protocolBlocks.push(`#CMD:ENGLISH`);
+                    protocolBlocks.push(`#TEXT:${segment.text}`);
+                    convertedText += segment.text;
+                }
+            }
+            
+            return {
+                protocol: protocolBlocks.join('\n'),
+                convertedText: convertedText,
+                hasKorean: hasKorean
+            };
+        }
+
+        // 스마트 텍스트 변환 (블록 기반 프로토콜)
         function convertTextWithProtocol(text) {
             console.log('convertTextWithProtocol 시작, 입력:', JSON.stringify(text));
             console.log('입력에 엔터키 있나?', text.includes('\n'));
             
-            const type = analyzeText(text);
-            console.log('analyzeText 결과:', type);
+            const analysis = analyzeText(text);
+            const type = analysis.type || analysis; // Handle both old and new format
+            console.log('analyzeText 결과:', analysis);
+            console.log('추출된 타입:', type);
             
-            if (type === 'korean' || type === 'mixed') {
-                // 한글이 포함된 경우: 자모 키로 변환 후 JSON 형태로 전송
+            // 혼합 언어나 한글 텍스트는 블록 기반 프로토콜 사용
+            if (type === 'mixed') {
+                console.log('혼합 텍스트 감지 - 블록 기반 프로토콜 사용');
+                
+                const segments = segmentTextByLanguage(text);
+                console.log('언어별 세그먼트:', segments);
+                
+                const blockResult = generateBlockProtocol(segments);
+                console.log('생성된 프로토콜:', blockResult.protocol);
+                
+                const result = {
+                    original: text,
+                    converted: blockResult.convertedText,
+                    protocol: blockResult.protocol,
+                    type: 'mixed',
+                    description: '혼합 언어 블록 프로토콜'
+                };
+                console.log('sendData 호출, 메시지:', blockResult.protocol);
+                return result;
+            } else if (type === 'korean') {
+                // 순수 한글 - 일관성을 위해 블록 프로토콜 사용
+                console.log('순수 한글 텍스트 - 블록 프로토콜 사용');
+                
                 const jamoKeys = convertHangulToJamoKeys(text);
                 console.log('jamoKeys 변환 결과:', JSON.stringify(jamoKeys));
-                console.log('변환 후 엔터키 있나?', jamoKeys.includes('\n'));
-                
-                const jsonData = {
-                    text: jamoKeys,
-                    speed_cps: currentTypingSpeed,
-                    type: 'korean'
-                };
+                const protocol = `#CMD:HANGUL\n#TEXT:${jamoKeys}`;
                 
                 const result = {
                     original: text,
                     converted: jamoKeys,
-                    protocol: JSON.stringify(jsonData),
-                    type: type,
-                    description: '한글 자모 키 변환'
+                    protocol: protocol,
+                    type: 'korean',
+                    description: '한글 블록 프로토콜'
                 };
-                console.log('최종 프로토콜:', JSON.stringify(result.protocol));
-                console.log('포함된 타이핑 속도:', currentTypingSpeed);
+                console.log('sendData 호출, 메시지:', protocol);
                 return result;
             } else {
-                // 순수 영문인 경우: JSON 형태로 전송
-                console.log('영문 처리 - 원본 그대로');
+                // 순수 영문 - 일관성을 위해 블록 프로토콜 사용
+                console.log('순수 영문 텍스트 - 블록 프로토콜 사용');
                 
-                const jsonData = {
-                    text: text,
-                    speed_cps: currentTypingSpeed,
-                    type: 'english'
-                };
+                const protocol = `#CMD:ENGLISH\n#TEXT:${text}`;
                 
                 const result = {
                     original: text,
                     converted: text,
-                    protocol: JSON.stringify(jsonData),
+                    protocol: protocol,
                     type: 'english',
-                    description: '영문 직접 입력'
+                    description: '영문 블록 프로토콜'
                 };
-                console.log('최종 프로토콜:', JSON.stringify(result.protocol));
-                console.log('포함된 타이핑 속도:', currentTypingSpeed);
+                console.log('sendData 호출, 메시지:', protocol);
                 return result;
             }
         }
