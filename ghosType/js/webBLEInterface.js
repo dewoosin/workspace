@@ -7,9 +7,15 @@
 class WebBLEInterface {
     constructor() {
         // BLE service and characteristic UUIDs (must match ESP32)
-        this.SERVICE_UUID = '12345678-1234-5678-9012-123456789abc';
-        this.RX_CHAR_UUID = '12345678-1234-5678-9012-123456789abd';
-        this.TX_CHAR_UUID = '12345678-1234-5678-9012-123456789abe';
+        // OLD UUIDs - commented out as they don't match ESP32 firmware
+        // this.SERVICE_UUID = '12345678-1234-5678-9012-123456789abc';
+        // this.RX_CHAR_UUID = '12345678-1234-5678-9012-123456789abd';
+        // this.TX_CHAR_UUID = '12345678-1234-5678-9012-123456789abe';
+        
+        // Current UUIDs matching ESP32 firmware
+        this.SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+        this.RX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+        this.TX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
         
         // BLE connection state
         this.device = null;
@@ -318,31 +324,32 @@ class WebBLEInterface {
     /**
      * Test the system with various inputs
      * 다양한 입력으로 시스템 테스트
+     * UNUSED: This test function is not called anywhere in the current implementation
      */
-    async runSystemTest() {
-        if (!this.connected) {
-            console.error('Not connected to device');
-            return;
-        }
-        
-        console.log('🧪 Running system test...\n');
-        
-        const testInputs = [
-            { text: "Hello World!", delay: 2000 },
-            { text: "안녕하세요", delay: 2000 },
-            { text: "Hello 안녕 World!", delay: 3000 },
-            { text: "대한민국 Korea 화이팅!", delay: 3000 },
-            { text: "Test 되 vs 돼 example", delay: 3000 }
-        ];
-        
-        for (const test of testInputs) {
-            console.log(`\nTesting: "${test.text}"`);
-            await this.sendText(test.text);
-            await this.delay(test.delay);
-        }
-        
-        console.log('\n✅ System test completed');
-    }
+    // async runSystemTest() {
+    //     if (!this.connected) {
+    //         console.error('Not connected to device');
+    //         return;
+    //     }
+    //     
+    //     console.log('🧪 Running system test...\n');
+    //     
+    //     const testInputs = [
+    //         { text: "Hello World!", delay: 2000 },
+    //         { text: "안녕하세요", delay: 2000 },
+    //         { text: "Hello 안녕 World!", delay: 3000 },
+    //         { text: "대한민국 Korea 화이팅!", delay: 3000 },
+    //         { text: "Test 되 vs 돼 example", delay: 3000 }
+    //     ];
+    //     
+    //     for (const test of testInputs) {
+    //         console.log(`\nTesting: "${test.text}"`);
+    //         await this.sendText(test.text);
+    //         await this.delay(test.delay);
+    //     }
+    //     
+    //     console.log('\n✅ System test completed');
+    // }
 }
 
 // Export for use

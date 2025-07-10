@@ -70,28 +70,36 @@ class BLEConnectionDiagnostics {
                 name: 'GHOSTYPE 직접 검색',
                 config: {
                     filters: [{ name: 'GHOSTYPE' }],
-                    optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                    // OLD UUID - commented out as it doesn't match ESP32 firmware
+                    // optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
                 }
             },
             {
                 name: 'GHOST 접두사 검색',
                 config: {
                     filters: [{ namePrefix: 'GHOST' }],
-                    optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                    // OLD UUID - commented out as it doesn't match ESP32 firmware
+                    // optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
                 }
             },
             {
                 name: 'ESP32 검색',
                 config: {
                     filters: [{ namePrefix: 'ESP32' }],
-                    optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                    // OLD UUID - commented out as it doesn't match ESP32 firmware
+                    // optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
                 }
             },
             {
                 name: '모든 장치 검색',
                 config: {
                     acceptAllDevices: true,
-                    optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                    // OLD UUID - commented out as it doesn't match ESP32 firmware
+                    // optionalServices: ['12345678-1234-5678-9012-123456789abc']
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
                 }
             }
         ];
@@ -132,13 +140,18 @@ class BLEConnectionDiagnostics {
             
             // Try to get service
             try {
-                const service = await server.getPrimaryService('12345678-1234-5678-9012-123456789abc');
+                // OLD UUID - commented out as it doesn't match ESP32 firmware
+                // const service = await server.getPrimaryService('12345678-1234-5678-9012-123456789abc');
+                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
                 this.logSuccess('GHOSTYPE 서비스 발견');
                 
                 // Try to get characteristics
                 try {
-                    const rxChar = await service.getCharacteristic('12345678-1234-5678-9012-123456789abd');
-                    const txChar = await service.getCharacteristic('12345678-1234-5678-9012-123456789abe');
+                    // OLD UUIDs - commented out as they don't match ESP32 firmware
+                    // const rxChar = await service.getCharacteristic('12345678-1234-5678-9012-123456789abd');
+                    // const txChar = await service.getCharacteristic('12345678-1234-5678-9012-123456789abe');
+                    const rxChar = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+                    const txChar = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
                     this.logSuccess('모든 특성 발견');
                     
                     // Test simple write
