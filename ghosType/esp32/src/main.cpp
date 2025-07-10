@@ -43,6 +43,11 @@ int globalTypingSpeed = 10; // 웹 기본값과 동일 (selected option)
 // 언어 상태 관리
 bool isKoreanMode = false; // 현재 입력 언어 모드 (false = English, true = Korean)
 
+// 한글 키 코드 정의 (HID 키코드)
+#ifndef KEY_HANGUL
+#define KEY_HANGUL 0xF2  // 한글/영문 전환 키
+#endif
+
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
 #define DEBUG_ENABLED true
@@ -61,14 +66,9 @@ void toggleToKoreanMode() {
     if (!isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 영문 → 한글");
         
-        // 한/영 전환 키 전송 (Alt+Shift 조합)
-        keyboard.press(KEY_LEFT_ALT);
-        delay(10);
-        keyboard.press(KEY_LEFT_SHIFT);
-        delay(50);
-        keyboard.release(KEY_LEFT_SHIFT);
-        keyboard.release(KEY_LEFT_ALT);
-        delay(100); // 전환 완료 대기
+        // 한/영 전환 키 전송 (KEY_HANGUL 사용)
+        keyboard.write(KEY_HANGUL);
+        delay(400); // IME 전환 완료 대기 (300~500ms)
         
         isKoreanMode = true;
     }
@@ -78,14 +78,9 @@ void toggleToEnglishMode() {
     if (isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 한글 → 영문");
         
-        // 한/영 전환 키 전송 (Alt+Shift 조합)
-        keyboard.press(KEY_LEFT_ALT);
-        delay(10);
-        keyboard.press(KEY_LEFT_SHIFT);
-        delay(50);
-        keyboard.release(KEY_LEFT_SHIFT);
-        keyboard.release(KEY_LEFT_ALT);
-        delay(100); // 전환 완료 대기
+        // 한/영 전환 키 전송 (KEY_HANGUL 사용)
+        keyboard.write(KEY_HANGUL);
+        delay(400); // IME 전환 완료 대기 (300~500ms)
         
         isKoreanMode = false;
     }
