@@ -169,6 +169,33 @@ export class UIController {
         return segments;
     }
 
+    // 텍스트에서 엔터키를 분리해서 프로토콜 생성
+    processTextWithEnters(text, language) {
+        const blocks = [];
+        const parts = text.split('\n');
+        
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            
+            if (part.length > 0) {
+                // 텍스트가 있으면 추가
+                if (language === 'korean') {
+                    const jamoKeys = convertHangulToJamoKeys(part);
+                    blocks.push(`#TEXT:${jamoKeys}`);
+                } else {
+                    blocks.push(`#TEXT:${part}`);
+                }
+            }
+            
+            // 마지막이 아니면 엔터키 추가 (줄바꿈 표시)
+            if (i < parts.length - 1) {
+                blocks.push(`#CMD:ENTER`);
+            }
+        }
+        
+        return blocks;
+    }
+
     // Generate block-based protocol
     generateBlockProtocol(segments) {
         const protocolBlocks = [];
@@ -178,15 +205,22 @@ export class UIController {
         for (const segment of segments) {
             if (segment.language === 'korean') {
                 hasKorean = true;
-                // Convert Korean text to jamo keys
-                const jamoKeys = convertHangulToJamoKeys(segment.text);
                 protocolBlocks.push(`#CMD:HANGUL`);
-                protocolBlocks.push(`#TEXT:${jamoKeys}`);
+                
+                // 엔터키가 포함된 텍스트 처리
+                const textBlocks = this.processTextWithEnters(segment.text, 'korean');
+                protocolBlocks.push(...textBlocks);
+                
+                // 변환된 텍스트는 엔터키 포함해서 저장
+                const jamoKeys = convertHangulToJamoKeys(segment.text);
                 convertedText += jamoKeys;
             } else {
-                // English text - keep original
                 protocolBlocks.push(`#CMD:ENGLISH`);
-                protocolBlocks.push(`#TEXT:${segment.text}`);
+                
+                // 엔터키가 포함된 텍스트 처리
+                const textBlocks = this.processTextWithEnters(segment.text, 'english');
+                protocolBlocks.push(...textBlocks);
+                
                 convertedText += segment.text;
             }
         }
@@ -229,7 +263,12 @@ export class UIController {
             console.log('순수 한글 텍스트 - 블록 프로토콜 사용');
             
             const jamoKeys = convertHangulToJamoKeys(text);
-            const protocol = `#CMD:HANGUL\n#TEXT:${jamoKeys}`;
+            
+            // 엔터키 처리
+            const protocolBlocks = [`#CMD:HANGUL`];
+            const textBlocks = this.processTextWithEnters(text, 'korean');
+            protocolBlocks.push(...textBlocks);
+            const protocol = protocolBlocks.join('\n');
             
             return {
                 original: text,
@@ -242,7 +281,11 @@ export class UIController {
             // Pure English - use block protocol for consistency
             console.log('순수 영문 텍스트 - 블록 프로토콜 사용');
             
-            const protocol = `#CMD:ENGLISH\n#TEXT:${text}`;
+            // 엔터키 처리
+            const protocolBlocks = [`#CMD:ENGLISH`];
+            const textBlocks = this.processTextWithEnters(text, 'english');
+            protocolBlocks.push(...textBlocks);
+            const protocol = protocolBlocks.join('\n');
             
             return {
                 original: text,

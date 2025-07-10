@@ -973,6 +973,33 @@
             return segments;
         }
 
+        // 텍스트에서 엔터키를 분리해서 프로토콜 생성
+        function processTextWithEnters(text, language) {
+            const blocks = [];
+            const parts = text.split('\n');
+            
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                
+                if (part.length > 0) {
+                    // 텍스트가 있으면 추가
+                    if (language === 'korean') {
+                        const jamoKeys = convertHangulToJamoKeys(part);
+                        blocks.push(`#TEXT:${jamoKeys}`);
+                    } else {
+                        blocks.push(`#TEXT:${part}`);
+                    }
+                }
+                
+                // 마지막이 아니면 엔터키 추가 (줄바꿈 표시)
+                if (i < parts.length - 1) {
+                    blocks.push(`#CMD:ENTER`);
+                }
+            }
+            
+            return blocks;
+        }
+
         // 블록 기반 프로토콜 생성
         function generateBlockProtocol(segments) {
             const protocolBlocks = [];
@@ -982,15 +1009,22 @@
             for (const segment of segments) {
                 if (segment.language === 'korean') {
                     hasKorean = true;
-                    // 한글 텍스트를 자모 키로 변환
-                    const jamoKeys = convertHangulToJamoKeys(segment.text);
                     protocolBlocks.push(`#CMD:HANGUL`);
-                    protocolBlocks.push(`#TEXT:${jamoKeys}`);
+                    
+                    // 엔터키가 포함된 텍스트 처리
+                    const textBlocks = processTextWithEnters(segment.text, 'korean');
+                    protocolBlocks.push(...textBlocks);
+                    
+                    // 변환된 텍스트는 엔터키 포함해서 저장
+                    const jamoKeys = convertHangulToJamoKeys(segment.text);
                     convertedText += jamoKeys;
                 } else {
-                    // 영문 텍스트는 원본 유지
                     protocolBlocks.push(`#CMD:ENGLISH`);
-                    protocolBlocks.push(`#TEXT:${segment.text}`);
+                    
+                    // 엔터키가 포함된 텍스트 처리
+                    const textBlocks = processTextWithEnters(segment.text, 'english');
+                    protocolBlocks.push(...textBlocks);
+                    
                     convertedText += segment.text;
                 }
             }
@@ -1037,7 +1071,12 @@
                 
                 const jamoKeys = convertHangulToJamoKeys(text);
                 console.log('jamoKeys 변환 결과:', JSON.stringify(jamoKeys));
-                const protocol = `#CMD:HANGUL\n#TEXT:${jamoKeys}`;
+                
+                // 엔터키 처리
+                const protocolBlocks = [`#CMD:HANGUL`];
+                const textBlocks = processTextWithEnters(text, 'korean');
+                protocolBlocks.push(...textBlocks);
+                const protocol = protocolBlocks.join('\n');
                 
                 const result = {
                     original: text,
@@ -1052,7 +1091,11 @@
                 // 순수 영문 - 일관성을 위해 블록 프로토콜 사용
                 console.log('순수 영문 텍스트 - 블록 프로토콜 사용');
                 
-                const protocol = `#CMD:ENGLISH\n#TEXT:${text}`;
+                // 엔터키 처리
+                const protocolBlocks = [`#CMD:ENGLISH`];
+                const textBlocks = processTextWithEnters(text, 'english');
+                protocolBlocks.push(...textBlocks);
+                const protocol = protocolBlocks.join('\n');
                 
                 const result = {
                     original: text,

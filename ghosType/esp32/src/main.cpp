@@ -114,6 +114,16 @@ bool processProtocolCommand(const String& line) {
         return true;
     }
     
+    // 엔터키 명령어
+    if (trimmedLine.equals("#CMD:ENTER")) {
+        DEBUG_PRINTLN("엔터키 입력");
+        keyboard.press(KEY_RETURN);
+        delay(100);
+        keyboard.release(KEY_RETURN);
+        delay(100);
+        return true;
+    }
+    
     // 텍스트 입력 명령어
     if (trimmedLine.startsWith("#TEXT:")) {
         String textContent = trimmedLine.substring(6); // "#TEXT:" 제거
@@ -125,24 +135,22 @@ bool processProtocolCommand(const String& line) {
         // 타이핑 속도 계산
         int delay_ms = 1000 / globalTypingSpeed;
         
-        // 문자별 타이핑
+        // 문자별 타이핑 (엔터키는 #CMD:ENTER로 별도 처리)
         for (int i = 0; i < textContent.length(); i++) {
             char c = textContent[i];
             
-            // 특수 문자 개별 처리
-            if (c == '\n' || c == '\r') {
-                keyboard.press(KEY_RETURN);
-                delay(100);
-                keyboard.release(KEY_RETURN);
-                delay(100);
-            } else if (c == '\t') {
+            // 특수 문자 개별 처리 (엔터키 제외)
+            if (c == '\t') {
                 keyboard.press(KEY_TAB);
                 delay(50);
                 keyboard.release(KEY_TAB);
                 delay(50);
             } else {
-                keyboard.write(c);
-                delay(delay_ms);
+                // 일반 문자 타이핑 (엔터키는 무시, #CMD:ENTER로 처리됨)
+                if (c != '\n' && c != '\r') {
+                    keyboard.write(c);
+                    delay(delay_ms);
+                }
             }
         }
         
