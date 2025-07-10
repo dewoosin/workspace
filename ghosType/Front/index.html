@@ -1240,7 +1240,8 @@
 
             const result = convertTextWithProtocol(message);
             startCountdownWithResult(result, () => {
-                sendData(JSON.stringify(result.protocol));
+                // 임시 테스트: 단순 텍스트 전송
+                sendData("test");
                 input.value = '';
                 updateConversionPreview();
             });
@@ -1250,7 +1251,8 @@
         function testText(text) {
             const result = convertTextWithProtocol(text);
             startCountdownWithResult(result, () => {
-                sendData(JSON.stringify(result.protocol));
+                // 임시 테스트: 단순 텍스트 전송
+                sendData("test");
             });
         }
 
@@ -1400,9 +1402,18 @@
                 return false;
             }
 
+            // BLE 연결 상태 확인
+            if (!device || !device.gatt.connected) {
+                addLog('❌ BLE 연결이 끊어졌습니다', 'error');
+                return false;
+            }
+
             try {
                 const encoder = new TextEncoder();
                 const data = encoder.encode(message);
+                
+                console.log(`전송할 데이터: "${message}"`);
+                console.log(`데이터 길이: ${data.length} 바이트`);
                 
                 await rxCharacteristic.writeValue(data);
                 addLog(`📤 전송 완료: "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`, 'success');
