@@ -1,5 +1,6 @@
 import { PROTOCOLS, DEFAULT_CONFIG } from './constants.js';
 import { analyzeText, convertHangulToJamoKeys } from './korean-converter-improved.js';
+import { convertToProtocol, analyzeProtocol, validateProtocol } from './language-protocol.js';
 import { logger } from './logger.js';
 import { MessageHistory } from './message-history.js';
 
@@ -10,6 +11,7 @@ export class UIController {
         this.countdownPending = null;
         this.currentTypingSpeed = DEFAULT_CONFIG.TYPING_SPEED;
         this.messageHistory = new MessageHistory();
+        this.useStructuredProtocol = true; // 새로운 구조화된 프로토콜 사용 여부
         
         this.initializeEventListeners();
         this.loadSettings();
@@ -88,6 +90,20 @@ export class UIController {
             this.currentTypingSpeed = parseInt(savedSpeed);
             document.getElementById('typingSpeed').value = savedSpeed;
         }
+        
+        // Load protocol mode preference
+        const savedProtocolMode = localStorage.getItem('ghostype_structured_protocol');
+        if (savedProtocolMode !== null) {
+            this.useStructuredProtocol = savedProtocolMode === 'true';
+        }
+        
+        // Update toggle button if it exists
+        const toggleBtn = document.getElementById('protocolToggleBtn');
+        if (toggleBtn) {
+            const modeText = this.useStructuredProtocol ? '구조화된 프로토콜' : '레거시 프로토콜';
+            toggleBtn.textContent = this.useStructuredProtocol ? '🏗️ 구조화됨' : '📄 레거시';
+            toggleBtn.title = `현재: ${modeText}. 클릭하여 전환`;
+        }
     }
 
     // Typing Speed Control
@@ -116,47 +132,107 @@ export class UIController {
         }
     }
 
+    // 프로토콜 모드 전환
+    toggleProtocolMode() {
+        this.useStructuredProtocol = !this.useStructuredProtocol;
+        
+        // Save to localStorage
+        localStorage.setItem('ghostype_structured_protocol', this.useStructuredProtocol);
+        
+        // Update UI
+        this.updateConversionPreview();
+        
+        const modeText = this.useStructuredProtocol ? '구조화된 프로토콜' : '레거시 프로토콜';
+        logger.log(`🔄 프로토콜 모드 변경: ${modeText}`, 'info');
+        
+        // Update toggle button text if it exists
+        const toggleBtn = document.getElementById('protocolToggleBtn');
+        if (toggleBtn) {
+            toggleBtn.textContent = this.useStructuredProtocol ? '🏗️ 구조화됨' : '📄 레거시';
+            toggleBtn.title = `현재: ${modeText}. 클릭하여 전환`;
+        }
+    }
+
     // Text Conversion
     convertTextWithProtocol(text) {
         // 디버깅: 입력 텍스트에 엔터키가 있는지 확인
         console.log('convertTextWithProtocol 입력:', JSON.stringify(text));
         console.log('엔터키 포함?', text.includes('\n'));
+        console.log('구조화된 프로토콜 사용:', this.useStructuredProtocol);
         
-        const analysis = analyzeText(text);
-        const type = analysis.type || analysis; // Handle both old and new format
-        
-        if (type === 'korean' || type === 'mixed') {
-            // 한글이 포함된 경우: 자모 키로 변환 후 JSON 형태로 전송
-            const jamoKeys = convertHangulToJamoKeys(text);
-            console.log('jamoKeys 변환 결과:', JSON.stringify(jamoKeys));
-            console.log('변환 후 엔터키 포함?', jamoKeys.includes('\n'));
-            const jsonData = {
-                text: jamoKeys,
-                speed_cps: this.currentTypingSpeed,
-                type: 'korean'
-            };
+        if (this.useStructuredProtocol) {
+            // 새로운 구조화된 프로토콜 사용
+            const protocolResult = convertToProtocol(text, this.currentTypingSpeed);
+            const analysis = protocolResult.analysis;
+            
+            // 프로토콜 유효성 검사
+            const validation = validateProtocol(protocolResult.protocol);
+            if (!validation.valid) {
+                console.warn('프로토콜 유효성 검사 실패:', validation.errors);
+                logger.log(`⚠️ 프로토콜 검증 실패: ${validation.errors[0]}`, 'warning');
+            }
+            
+            let description = '';
+            if (analysis.stats.koreanSegments > 0 && analysis.stats.englishSegments > 0) {
+                description = `구조화된 혼합 프로토콜 (한글 ${analysis.stats.koreanSegments}블록, 영문 ${analysis.stats.englishSegments}블록, 전환 ${analysis.stats.languageSwitches}회)`;
+            } else if (analysis.stats.koreanSegments > 0) {
+                description = `구조화된 한글 프로토콜 (${analysis.stats.koreanSegments}블록)`;
+            } else {
+                description = `구조화된 영문 프로토콜 (${analysis.stats.englishSegments}블록)`;
+            }
+            
             return {
                 original: text,
-                converted: jamoKeys,
-                protocol: JSON.stringify(jsonData),
-                type: type,
-                description: '한글 자모 키 변환'
+                converted: protocolResult.protocol,
+                protocol: protocolResult.protocol,
+                type: analysis.stats.koreanSegments > 0 ? 
+                      (analysis.stats.englishSegments > 0 ? 'mixed' : 'korean') : 'english',
+                description: description,
+                isStructured: true,
+                analysis: analysis,
+                validation: validation,
+                metadata: protocolResult.metadata
             };
         } else {
-            // 순수 영문인 경우: JSON 형태로 전송
-            console.log('영문 처리, 엔터키 포함?', text.includes('\n'));
-            const jsonData = {
-                text: text,
-                speed_cps: this.currentTypingSpeed,
-                type: 'english'
-            };
-            return {
-                original: text,
-                converted: text,
-                protocol: JSON.stringify(jsonData),
-                type: 'english',
-                description: '영문 직접 입력'
-            };
+            // 기존 레거시 프로토콜 사용 (호환성 유지)
+            const analysis = analyzeText(text);
+            const type = analysis.type || analysis; // Handle both old and new format
+            
+            if (type === 'korean' || type === 'mixed') {
+                // 한글이 포함된 경우: 자모 키로 변환 후 JSON 형태로 전송
+                const jamoKeys = convertHangulToJamoKeys(text);
+                console.log('jamoKeys 변환 결과:', JSON.stringify(jamoKeys));
+                console.log('변환 후 엔터키 포함?', jamoKeys.includes('\n'));
+                const jsonData = {
+                    text: jamoKeys,
+                    speed_cps: this.currentTypingSpeed,
+                    type: 'korean'
+                };
+                return {
+                    original: text,
+                    converted: jamoKeys,
+                    protocol: JSON.stringify(jsonData),
+                    type: type,
+                    description: '한글 자모 키 변환 (레거시)',
+                    isStructured: false
+                };
+            } else {
+                // 순수 영문인 경우: JSON 형태로 전송
+                console.log('영문 처리, 엔터키 포함?', text.includes('\n'));
+                const jsonData = {
+                    text: text,
+                    speed_cps: this.currentTypingSpeed,
+                    type: 'english'
+                };
+                return {
+                    original: text,
+                    converted: text,
+                    protocol: JSON.stringify(jsonData),
+                    type: 'english',
+                    description: '영문 직접 입력 (레거시)',
+                    isStructured: false
+                };
+            }
         }
     }
 
@@ -191,7 +267,25 @@ export class UIController {
             .replace(/\t/g, '→')
             .replace(/\r/g, '↓');
         
-        if (result.type === 'korean' || result.type === 'mixed') {
+        if (result.isStructured) {
+            // 구조화된 프로토콜 정보 표시
+            const segments = result.analysis.segments;
+            const stats = result.analysis.stats;
+            
+            let segmentDisplay = segments.map(segment => {
+                const langIcon = segment.language === 'korean' ? '🇰🇷' : 
+                               segment.language === 'english' ? '🇺🇸' : '⚙️';
+                return `${langIcon}${segment.text}`;
+            }).join(' ');
+            
+            previewText.innerHTML = `
+                <strong>원본:</strong> ${displayOriginal}<br>
+                <strong>세그먼트:</strong> ${segmentDisplay}<br>
+                <strong>설명:</strong> ${result.description}<br>
+                <strong>통계:</strong> 총 ${stats.totalSegments}블록, 전환 ${stats.languageSwitches}회, 명령 ${stats.totalCommands}개
+                ${result.validation && !result.validation.valid ? '<br><strong style="color: orange;">⚠️ 검증 경고</strong>' : ''}
+            `;
+        } else if (result.type === 'korean' || result.type === 'mixed') {
             previewText.innerHTML = `
                 <strong>원본:</strong> ${displayOriginal}<br>
                 <strong>자모:</strong> ${displayConverted}<br>
@@ -232,7 +326,25 @@ export class UIController {
             .replace(/\t/g, '→')
             .replace(/\r/g, '↓');
         
-        if (result.type === 'korean' || result.type === 'mixed') {
+        if (result.isStructured) {
+            // 구조화된 프로토콜 정보 표시 (모달용)
+            const segments = result.analysis.segments;
+            const stats = result.analysis.stats;
+            
+            let segmentDisplay = segments.map(segment => {
+                const langIcon = segment.language === 'korean' ? '🇰🇷' : 
+                               segment.language === 'english' ? '🇺🇸' : '⚙️';
+                return `${langIcon}${segment.text}`;
+            }).join(' ');
+            
+            previewText.innerHTML = `
+                <strong>원본:</strong> ${displayOriginal}<br>
+                <strong>세그먼트:</strong> ${segmentDisplay}<br>
+                <strong>설명:</strong> ${result.description}<br>
+                <strong>통계:</strong> 총 ${stats.totalSegments}블록, 전환 ${stats.languageSwitches}회, 명령 ${stats.totalCommands}개
+                ${result.validation && !result.validation.valid ? '<br><strong style="color: orange;">⚠️ 검증 경고</strong>' : ''}
+            `;
+        } else if (result.type === 'korean' || result.type === 'mixed') {
             previewText.innerHTML = `
                 <strong>원본:</strong> ${displayOriginal}<br>
                 <strong>자모:</strong> ${displayConverted}<br>
