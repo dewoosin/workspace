@@ -40,9 +40,9 @@ bool isTyping = false;
 unsigned long lastTypeTime = 0;
 int globalTypingSpeed = 10; // 웹 기본값과 동일 (selected option)
 
-// 언어 상태 관리 (새로운 프로토콜용)
+// 언어 상태 관리
 bool isKoreanMode = false; // 현재 입력 언어 모드 (false = English, true = Korean)
-bool protocolModeEnabled = false; // 구조화된 프로토콜 모드 활성화 여부
+
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
 #define DEBUG_ENABLED true
@@ -114,49 +114,6 @@ bool processProtocolCommand(const String& line) {
         return true;
     }
     
-    // 특수 키 명령어
-    if (trimmedLine.equals("#CMD:ENTER")) {
-        DEBUG_PRINTLN("엔터키 입력");
-        keyboard.press(KEY_RETURN);
-        delay(50);
-        keyboard.release(KEY_RETURN);
-        delay(100);
-        return true;
-    }
-    
-    if (trimmedLine.equals("#CMD:TAB")) {
-        DEBUG_PRINTLN("탭키 입력");
-        keyboard.press(KEY_TAB);
-        delay(50);
-        keyboard.release(KEY_TAB);
-        delay(50);
-        return true;
-    }
-    
-    if (trimmedLine.equals("#CMD:SHIFT")) {
-        DEBUG_PRINTLN("시프트키 입력");
-        keyboard.press(KEY_LEFT_SHIFT);
-        delay(50);
-        keyboard.release(KEY_LEFT_SHIFT);
-        return true;
-    }
-    
-    if (trimmedLine.equals("#CMD:CTRL")) {
-        DEBUG_PRINTLN("컨트롤키 입력");
-        keyboard.press(KEY_LEFT_CTRL);
-        delay(50);
-        keyboard.release(KEY_LEFT_CTRL);
-        return true;
-    }
-    
-    if (trimmedLine.equals("#CMD:ALT")) {
-        DEBUG_PRINTLN("알트키 입력");
-        keyboard.press(KEY_LEFT_ALT);
-        delay(50);
-        keyboard.release(KEY_LEFT_ALT);
-        return true;
-    }
-    
     // 텍스트 입력 명령어
     if (trimmedLine.startsWith("#TEXT:")) {
         String textContent = trimmedLine.substring(6); // "#TEXT:" 제거
@@ -192,10 +149,10 @@ bool processProtocolCommand(const String& line) {
         return true;
     }
     
-    // 알 수 없는 명령어
+    // 알 수 없는 명령어 - 무시하고 계속
     DEBUG_PRINT("알 수 없는 프로토콜 명령: ");
     DEBUG_PRINTLN(trimmedLine);
-    return false; // 알 수 없는 명령이지만 계속 진행
+    return true;
 }
 
 // 구조화된 프로토콜 처리
@@ -219,11 +176,7 @@ void processStructuredProtocol(const String& text) {
         DEBUG_PRINT(": ");
         DEBUG_PRINTLN(line);
         
-        if (!processProtocolCommand(line)) {
-            DEBUG_PRINT("라인 ");
-            DEBUG_PRINT(lineNumber);
-            DEBUG_PRINTLN(" 처리 실패, 계속 진행");
-        }
+        processProtocolCommand(line);
         
         startPos = endPos + 1;
         lineNumber++;
@@ -234,6 +187,7 @@ void processStructuredProtocol(const String& text) {
     
     DEBUG_PRINTLN("구조화된 프로토콜 처리 완료");
 }
+
 
 // BLE 서버 콜백
 class MyServerCallbacks: public BLEServerCallbacks {
@@ -304,7 +258,6 @@ void processTypingQueue() {
             // 새로운 구조화된 프로토콜 감지
             if (text.startsWith("#CMD:") || text.indexOf("\n#CMD:") != -1 || text.indexOf("\n#TEXT:") != -1) {
                 DEBUG_PRINTLN("구조화된 프로토콜 감지됨");
-                protocolModeEnabled = true;
                 processStructuredProtocol(text);
                 
                 // 완료 응답 전송
@@ -323,7 +276,6 @@ void processTypingQueue() {
             // 기존 JSON 또는 일반 텍스트 파싱 (호환성 유지)
             String textToType = "";
             int speed_cps = globalTypingSpeed; // 웹에서 전달받은 속도만 사용
-            protocolModeEnabled = false; // 레거시 모드
             
             // JSON 파싱 시도
             if (text.startsWith("{")) {

@@ -337,7 +337,3 @@ export function runDiagnostics() {
 
 // === Backward Compatibility ===
 // Export with original function names for compatibility
-export { decomposeHangul as decomposeHangul };
-export { jamoToQwerty as jamoToQwerty };
-export { convertHangulToJamoKeys as convertHangulToJamoKeys };
-export { analyzeText as analyzeText };

@@ -123,9 +123,6 @@ window.updateTypingSpeed = function() {
     uiController.updateTypingSpeed();
 };
 
-window.toggleProtocolMode = function() {
-    uiController.toggleProtocolMode();
-};
 
 window.openHistoryModal = function() {
     uiController.openHistoryModal();
