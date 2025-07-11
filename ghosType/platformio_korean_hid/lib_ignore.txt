@@ -1,0 +1,4 @@
+Adafruit TinyUSB Library
+SdFat - Adafruit Fork
+Adafruit BusIO
+Adafruit GFX Library
