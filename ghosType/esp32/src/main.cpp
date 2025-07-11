@@ -74,12 +74,31 @@ void toggleToKoreanMode() {
     if (!isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 영문 → 한글");
         
-        // 한/영 전환 키 전송 (Alt + Shift 조합)
+        // 한/영 전환 키 전송 (여러 조합 시도)
+        // 1. Ctrl + Shift 조합 (Windows/Linux 일반적)
+        keyboard.press(KEY_LEFT_CTRL);
+        delay(10);
+        keyboard.press(KEY_LEFT_SHIFT);
+        delay(50);
+        keyboard.releaseAll();
+        delay(200);
+        
+        // 2. Alt + Shift 조합 (Windows 대안)
         keyboard.press(KEY_LEFT_ALT);
         delay(10);
         keyboard.press(KEY_LEFT_SHIFT);
         delay(50);
         keyboard.releaseAll();
+        delay(200);
+        
+        // 3. 우측 Alt 키 (AltGr) 시도
+        keyboard.press(KEY_RIGHT_ALT);
+        delay(50);
+        keyboard.releaseAll();
+        delay(200);
+        
+        // 4. 한글 키 직접 시도 (0x90)
+        keyboard.write(0x90);
         delay(800); // IME 전환 완료 대기 (더 긴 딜레이)
         
         isKoreanMode = true;
@@ -100,12 +119,31 @@ void toggleToEnglishMode() {
     if (isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 한글 → 영문");
         
-        // 한/영 전환 키 전송 (Alt + Shift 조합)
+        // 한/영 전환 키 전송 (여러 조합 시도)
+        // 1. Ctrl + Shift 조합 (Windows/Linux 일반적)
+        keyboard.press(KEY_LEFT_CTRL);
+        delay(10);
+        keyboard.press(KEY_LEFT_SHIFT);
+        delay(50);
+        keyboard.releaseAll();
+        delay(200);
+        
+        // 2. Alt + Shift 조합 (Windows 대안)
         keyboard.press(KEY_LEFT_ALT);
         delay(10);
         keyboard.press(KEY_LEFT_SHIFT);
         delay(50);
         keyboard.releaseAll();
+        delay(200);
+        
+        // 3. 우측 Alt 키 (AltGr) 시도
+        keyboard.press(KEY_RIGHT_ALT);
+        delay(50);
+        keyboard.releaseAll();
+        delay(200);
+        
+        // 4. 한글 키 직접 시도 (0x90)
+        keyboard.write(0x90);
         delay(800); // IME 전환 완료 대기 (더 긴 딜레이)
         
         isKoreanMode = false;
