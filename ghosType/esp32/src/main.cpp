@@ -68,7 +68,7 @@ void toggleToKoreanMode() {
         
         // 한/영 전환 키 전송 (KEY_HANGUL 사용)
         keyboard.write(KEY_HANGUL);
-        delay(400); // IME 전환 완료 대기 (300~500ms)
+        delay(800); // IME 전환 완료 대기 (더 긴 딜레이)
         
         isKoreanMode = true;
     }
@@ -80,7 +80,7 @@ void toggleToEnglishMode() {
         
         // 한/영 전환 키 전송 (KEY_HANGUL 사용)
         keyboard.write(KEY_HANGUL);
-        delay(400); // IME 전환 완료 대기 (300~500ms)
+        delay(800); // IME 전환 완료 대기 (더 긴 딜레이)
         
         isKoreanMode = false;
     }
