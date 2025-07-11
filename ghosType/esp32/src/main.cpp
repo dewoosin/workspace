@@ -74,8 +74,12 @@ void toggleToKoreanMode() {
     if (!isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 영문 → 한글");
         
-        // 한/영 전환 키 전송 (KEY_HANGUL 사용)
-        keyboard.write(KEY_HANGUL);
+        // 한/영 전환 키 전송 (Alt + Shift 조합)
+        keyboard.press(KEY_LEFT_ALT);
+        delay(10);
+        keyboard.press(KEY_LEFT_SHIFT);
+        delay(50);
+        keyboard.releaseAll();
         delay(800); // IME 전환 완료 대기 (더 긴 딜레이)
         
         isKoreanMode = true;
@@ -96,8 +100,12 @@ void toggleToEnglishMode() {
     if (isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 한글 → 영문");
         
-        // 한/영 전환 키 전송 (KEY_HANGUL 사용)
-        keyboard.write(KEY_HANGUL);
+        // 한/영 전환 키 전송 (Alt + Shift 조합)
+        keyboard.press(KEY_LEFT_ALT);
+        delay(10);
+        keyboard.press(KEY_LEFT_SHIFT);
+        delay(50);
+        keyboard.releaseAll();
         delay(800); // IME 전환 완료 대기 (더 긴 딜레이)
         
         isKoreanMode = false;
