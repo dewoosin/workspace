@@ -113,15 +113,15 @@ void loop() {
             break;
             
         case 10:
-            Serial.println("Menu 키");
-            keyboard.press(KEY_MENU);
+            Serial.println("Insert 키");
+            keyboard.press(KEY_INSERT);
             delay(100);
             keyboard.releaseAll();
             break;
             
         case 11:
-            Serial.println("한자 키 (0xF1)");
-            keyboard.press(0xF1);
+            Serial.println("Print Screen 키");
+            keyboard.press(KEY_PRINT_SCREEN);
             delay(100);
             keyboard.releaseAll();
             break;
