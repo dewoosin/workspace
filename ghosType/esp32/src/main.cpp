@@ -46,7 +46,7 @@ bool isInitialized = false; // 초기화 상태 확인용
 
 // 한글 키 코드 정의 (HID 키코드)
 #ifndef KEY_HANGUL
-#define KEY_HANGUL 0xF2  // 한글/영문 전환 키
+#define KEY_HANGUL 0x90  // 한글/영문 전환 키 (HID_KEY_LANG1)
 #endif
 
 
