@@ -44,12 +44,12 @@ uint8_t const desc_hid_report[] = {
 // HID 객체
 Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report), HID_ITF_PROTOCOL_KEYBOARD, 2, false);
 
-// 키보드 리포트 구조체
+// 키보드 리포트 구조체 (충돌 방지)
 typedef struct {
     uint8_t modifier;
     uint8_t reserved;
     uint8_t keycode[6];
-} hid_keyboard_report_t;
+} korean_keyboard_report_t;
 
 void setup() {
     Serial.begin(115200);
@@ -83,7 +83,7 @@ void loop() {
         Serial.println("📝 'A' 키 전송 중...");
         
         // 키보드 리포트 생성
-        hid_keyboard_report_t report = {0};
+        korean_keyboard_report_t report = {0};
         report.keycode[0] = 0x04;  // 'A' 키
         
         // HID 리포트 전송
