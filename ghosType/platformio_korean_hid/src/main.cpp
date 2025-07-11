@@ -1,252 +1,102 @@
 /**
- * GHOSTYPE Korean HID - PlatformIO Version (Simplified)
+ * GHOSTYPE Korean HID - 최소 테스트 버전
  */
 
 #include <Arduino.h>
 #include "Adafruit_TinyUSB.h"
-#include "config.h"
-#include "usb_descriptors.h"
 
-// 전역 변수
-KoreanUSBHID koreanKeyboard;
-bool system_initialized = false;
+// HID Report Descriptor
+uint8_t const desc_hid_report[] = {
+    0x05, 0x01,                    // Usage Page (Generic Desktop Ctrls)
+    0x09, 0x06,                    // Usage (Keyboard)
+    0xA1, 0x01,                    // Collection (Application)
+    0x05, 0x07,                    //   Usage Page (Kbrd/Keypad)
+    0x19, 0xE0,                    //   Usage Minimum (0xE0)
+    0x29, 0xE7,                    //   Usage Maximum (0xE7)
+    0x15, 0x00,                    //   Logical Minimum (0)
+    0x25, 0x01,                    //   Logical Maximum (1)
+    0x75, 0x01,                    //   Report Size (1)
+    0x95, 0x08,                    //   Report Count (8)
+    0x81, 0x02,                    //   Input (Data,Var,Abs)
+    0x95, 0x01,                    //   Report Count (1)
+    0x75, 0x08,                    //   Report Size (8)
+    0x81, 0x01,                    //   Input (Const,Array,Abs)
+    0x95, 0x05,                    //   Report Count (5)
+    0x75, 0x01,                    //   Report Size (1)
+    0x05, 0x08,                    //   Usage Page (LEDs)
+    0x19, 0x01,                    //   Usage Minimum (Num Lock)
+    0x29, 0x05,                    //   Usage Maximum (Kana)
+    0x91, 0x02,                    //   Output (Data,Var,Abs)
+    0x95, 0x01,                    //   Report Count (1)
+    0x75, 0x03,                    //   Report Size (3)
+    0x91, 0x01,                    //   Output (Const,Array,Abs)
+    0x95, 0x06,                    //   Report Count (6)
+    0x75, 0x08,                    //   Report Size (8)
+    0x15, 0x00,                    //   Logical Minimum (0)
+    0x25, 0x65,                    //   Logical Maximum (101)
+    0x05, 0x07,                    //   Usage Page (Kbrd/Keypad)
+    0x19, 0x00,                    //   Usage Minimum (0x00)
+    0x29, 0x65,                    //   Usage Maximum (0x65)
+    0x81, 0x00,                    //   Input (Data,Array,Abs)
+    0xC0,                          // End Collection
+};
 
-// 함수 선언
-void runInitialTest();
-void testBasicKeys();
-void testHangulToggle();
-void testConsumerKeys();
-void showSystemStatus();
-void sendSimpleText(const char* text);
-void sendEnter();
-uint8_t charToKeycode(char c);
+// HID 객체
+Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report), HID_ITF_PROTOCOL_KEYBOARD, 2, false);
+
+// 키보드 리포트 구조체
+typedef struct {
+    uint8_t modifier;
+    uint8_t reserved;
+    uint8_t keycode[6];
+} hid_keyboard_report_t;
 
 void setup() {
     Serial.begin(115200);
-    delay(2000);
     
-    Serial.println("\n===============================================");
-    Serial.println("  GHOSTYPE - Korean USB HID (PlatformIO)");
-    Serial.println("===============================================");
-    Serial.println("Initializing Korean keyboard functionality...");
-    Serial.println("===============================================\n");
+    // USB 설정
+    TinyUSBDevice.setManufacturerDescriptor("Samsung Electronics");
+    TinyUSBDevice.setProductDescriptor("Korean USB Keyboard");
+    TinyUSBDevice.setSerialDescriptor("KR2024KB001");
+    TinyUSBDevice.setID(0x04E8, 0x7021);  // Samsung VID/PID
     
-    // 한국어 키보드 초기화
-    Serial.println("🔧 Initializing Korean USB HID...");
+    // USB HID 시작
+    usb_hid.begin();
     
-    if (koreanKeyboard.begin()) {
-        Serial.println("✅ Korean USB HID initialized successfully");
-        system_initialized = true;
-        
-        // 설정 정보 출력
-        Serial.println("\n📊 Configuration:");
-        Serial.println("   - VID: 0x04E8 (Samsung Electronics)");
-        Serial.println("   - PID: 0x7021 (Korean USB Keyboard)");
-        Serial.println("   - Country Code: 16 (Korean)");
-        Serial.println("   - Language: Korean + English");
-        
-        // 상태 출력
-        koreanKeyboard.printStatus();
-        
-        // 연결 대기
-        Serial.println("\n🔍 Waiting for USB connection...");
-        Serial.println("📋 Check Windows Device Manager for 'Korean USB Keyboard'");
-        
-        // 첫 번째 테스트
-        delay(3000);
-        runInitialTest();
-        
-    } else {
-        Serial.println("❌ Korean USB HID initialization failed");
-        Serial.println("🔧 Please check:");
-        Serial.println("   - TinyUSB library installation");
-        Serial.println("   - USB cable connection");
-        Serial.println("   - Board settings (USB-OTG mode)");
-        return;
+    // USB 장치 시작
+    Serial.println("USB HID 초기화 중...");
+    
+    // 연결 대기
+    while (!TinyUSBDevice.mounted()) {
+        delay(1);
     }
     
-    Serial.println("\n🧪 System ready - Tests will run every 10 seconds");
-    Serial.println("📝 Open Notepad to observe keyboard output");
-    Serial.println("");
+    Serial.println("✅ USB HID 연결 성공!");
+    delay(1000);
 }
 
 void loop() {
-    if (!system_initialized) {
-        delay(1000);
-        return;
-    }
+    // 단순 테스트: 5초마다 'A' 키 전송
+    static unsigned long lastSend = 0;
     
-    static unsigned long last_test = 0;
-    static int test_cycle = 0;
-    
-    // 10초마다 테스트 실행
-    if (millis() - last_test > 10000) {
-        test_cycle++;
+    if (millis() - lastSend > 5000) {
+        Serial.println("📝 'A' 키 전송 중...");
         
-        Serial.printf("\n🔄 Test Cycle %d\n", test_cycle);
-        Serial.println("================");
+        // 키보드 리포트 생성
+        hid_keyboard_report_t report = {0};
+        report.keycode[0] = 0x04;  // 'A' 키
         
-        switch (test_cycle % 4) {
-            case 1:
-                testBasicKeys();
-                break;
-            case 2:
-                testHangulToggle();
-                break;
-            case 3:
-                testConsumerKeys();
-                break;
-            case 0:
-                showSystemStatus();
-                break;
-        }
+        // HID 리포트 전송
+        usb_hid.sendReport(0, &report, sizeof(report));
         
-        last_test = millis();
+        delay(100);
+        
+        // 키 해제
+        memset(&report, 0, sizeof(report));
+        usb_hid.sendReport(0, &report, sizeof(report));
+        
+        lastSend = millis();
     }
     
     delay(100);
-}
-
-void runInitialTest() {
-    Serial.println("🔍 Initial System Test");
-    Serial.println("----------------------");
-    
-    // 연결 상태 확인
-    Serial.printf("USB Connected: %s\n", koreanKeyboard.isConnected() ? "✅ Yes" : "❌ No");
-    Serial.printf("HID Initialized: %s\n", koreanKeyboard.isInitialized() ? "✅ Yes" : "❌ No");
-    
-    if (koreanKeyboard.isConnected() && koreanKeyboard.isInitialized()) {
-        Serial.println("✅ System ready for testing!");
-        
-        // 식별 텍스트 전송
-        Serial.println("📝 Sending identification text...");
-        sendSimpleText("GHOSTYPE Korean HID - PlatformIO Test");
-        sendEnter();
-        
-    } else {
-        Serial.println("⚠️  System not ready - continuing with tests anyway");
-    }
-}
-
-void testBasicKeys() {
-    Serial.println("🔤 Basic Key Input Test");
-    Serial.println("-----------------------");
-    
-    Serial.println("📝 Sending: 'Hello Korean World'");
-    
-    sendSimpleText("Hello Korean World");
-    sendEnter();
-    
-    Serial.println("✅ Basic key test completed");
-}
-
-void testHangulToggle() {
-    Serial.println("🔄 Hangul Toggle Test");
-    Serial.println("---------------------");
-    
-    Serial.printf("Current mode: %s\n", (koreanKeyboard.getCurrentMode() == LANG_MODE_KOREAN) ? "Korean" : "English");
-    
-    Serial.println("📝 Attempting hangul toggle...");
-    
-    // 한영 전환 시도
-    bool success = koreanKeyboard.toggleLanguage();
-    
-    if (success) {
-        Serial.println("✅ Toggle command sent successfully");
-        
-        delay(1000);
-        
-        // 모드 확인
-        Serial.printf("New mode: %s\n", (koreanKeyboard.getCurrentMode() == LANG_MODE_KOREAN) ? "Korean" : "English");
-        
-        // 테스트 텍스트 전송
-        if (koreanKeyboard.getCurrentMode() == LANG_MODE_KOREAN) {
-            Serial.println("📝 Sending Korean test pattern (should type 안녕)");
-            sendSimpleText("dkssud"); // 안녕
-        } else {
-            Serial.println("📝 Sending English test");
-            sendSimpleText("English Mode");
-        }
-        
-        sendEnter();
-        
-    } else {
-        Serial.println("❌ Toggle command failed");
-    }
-    
-    Serial.println("✅ Hangul toggle test completed");
-}
-
-void testConsumerKeys() {
-    Serial.println("🎛️ Consumer Control Test");
-    Serial.println("------------------------");
-    
-    Serial.println("📝 Testing consumer hangul key...");
-    
-    if (koreanKeyboard.sendConsumerKey(CONSUMER_HANGUL_TOGGLE)) {
-        Serial.println("✅ Consumer hangul key sent");
-    } else {
-        Serial.println("❌ Consumer hangul key failed");
-    }
-    
-    delay(1000);
-    
-    Serial.println("📝 Testing direct hangul key...");
-    
-    if (koreanKeyboard.sendKey(HID_KEY_HANGUL)) {
-        Serial.println("✅ Direct hangul key sent");
-    } else {
-        Serial.println("❌ Direct hangul key failed");
-    }
-    
-    delay(1000);
-    
-    Serial.println("✅ Consumer key test completed");
-}
-
-void showSystemStatus() {
-    Serial.println("📊 System Status");
-    Serial.println("----------------");
-    
-    koreanKeyboard.printStatus();
-    koreanKeyboard.printStats();
-    
-    Serial.println("✅ Status report completed");
-}
-
-// 헬퍼 함수들
-void sendSimpleText(const char* text) {
-    for (int i = 0; text[i] != '\0'; i++) {
-        char c = text[i];
-        uint8_t keycode = charToKeycode(c);
-        
-        if (keycode != 0) {
-            koreanKeyboard.sendKey(keycode);
-            delay(50);
-        }
-    }
-}
-
-void sendEnter() {
-    koreanKeyboard.sendKey(0x28); // Enter key
-    delay(100);
-}
-
-uint8_t charToKeycode(char c) {
-    // 기본 ASCII to HID keycode 변환
-    if (c >= 'a' && c <= 'z') {
-        return c - 'a' + 0x04;
-    } else if (c >= 'A' && c <= 'Z') {
-        return c - 'A' + 0x04;
-    } else if (c >= '0' && c <= '9') {
-        return c - '0' + 0x1E;
-    } else if (c == ' ') {
-        return 0x2C; // Space
-    } else if (c == '-') {
-        return 0x2D; // Minus
-    } else if (c == '.') {
-        return 0x37; // Period
-    }
-    
-    return 0;
 }
