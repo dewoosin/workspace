@@ -66,34 +66,50 @@ void setup() {
     // USB 장치 시작
     Serial.println("USB HID 초기화 중...");
     
-    // 연결 대기
-    while (!TinyUSBDevice.mounted()) {
+    // 연결 대기 (타임아웃 추가)
+    int timeout = 0;
+    while (!TinyUSBDevice.mounted() && timeout < 5000) {
         delay(1);
+        timeout++;
     }
     
-    Serial.println("✅ USB HID 연결 성공!");
+    if (TinyUSBDevice.mounted()) {
+        Serial.println("✅ USB HID 연결 성공!");
+    } else {
+        Serial.println("⚠️ USB HID 연결 실패 - 계속 진행");
+    }
+    
     delay(1000);
 }
 
 void loop() {
     // 단순 테스트: 5초마다 'A' 키 전송
     static unsigned long lastSend = 0;
+    static int counter = 0;
     
-    if (millis() - lastSend > 5000) {
-        Serial.println("📝 'A' 키 전송 중...");
+    // 생존 신호
+    if (millis() - lastSend > 1000) {
+        counter++;
+        Serial.printf("⏰ 대기 중... %d초\n", counter);
         
-        // 키보드 리포트 생성
-        korean_keyboard_report_t report = {0};
-        report.keycode[0] = 0x04;  // 'A' 키
-        
-        // HID 리포트 전송
-        usb_hid.sendReport(0, &report, sizeof(report));
-        
-        delay(100);
-        
-        // 키 해제
-        memset(&report, 0, sizeof(report));
-        usb_hid.sendReport(0, &report, sizeof(report));
+        // 5초마다 키 전송 시도
+        if (counter % 5 == 0) {
+            Serial.println("📝 'A' 키 전송 시도...");
+            
+            // 키보드 리포트 생성
+            korean_keyboard_report_t report = {0};
+            report.keycode[0] = 0x04;  // 'A' 키
+            
+            // HID 리포트 전송
+            bool success = usb_hid.sendReport(0, &report, sizeof(report));
+            Serial.printf("키 전송 결과: %s\n", success ? "성공" : "실패");
+            
+            delay(100);
+            
+            // 키 해제
+            memset(&report, 0, sizeof(report));
+            usb_hid.sendReport(0, &report, sizeof(report));
+        }
         
         lastSend = millis();
     }
