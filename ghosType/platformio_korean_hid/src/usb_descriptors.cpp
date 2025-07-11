@@ -1,13 +1,12 @@
 #include "usb_descriptors.h"
-#include "config.h"
 
 /**
  * @file usb_descriptors.cpp
- * @brief 한국어 키보드 클래스 구현
+ * @brief 한국어 키보드 클래스 구현 (간소화)
  */
 
 // 생성자
-KoreanUSBHID::KoreanUSBHID() : USBHID() {
+KoreanUSBHID::KoreanUSBHID() {
     _init_state();
     _reset_reports();
 }
@@ -34,31 +33,29 @@ bool KoreanUSBHID::_send_report(uint8_t report_id, const void* data, uint16_t le
         return false;
     }
     
-    return HID().SendReport(report_id, data, len);
+    return _usb_hid.sendReport(report_id, data, len);
 }
 
 // 초기화
 bool KoreanUSBHID::begin(void) {
-    // USB 초기화
-    if (!USB.begin()) {
+    // USB 설정
+    TinyUSBDevice.setManufacturerDescriptor("Samsung Electronics");
+    TinyUSBDevice.setProductDescriptor("Korean USB Keyboard");
+    TinyUSBDevice.setSerialDescriptor("KR2024KB001");
+    TinyUSBDevice.setID(USB_VENDOR_ID, USB_PRODUCT_ID);
+    
+    // HID Descriptor 설정
+    _usb_hid.setPollInterval(2);
+    _usb_hid.setReportDescriptor(korean_hid_report_desc, KOREAN_HID_DESC_SIZE);
+    _usb_hid.setStringDescriptor("Korean USB HID Keyboard");
+    
+    // HID 초기화
+    if (!_usb_hid.begin()) {
         return false;
     }
     
-    // USB 장치 정보 설정
-    USB.VID(USB_VENDOR_ID);
-    USB.PID(USB_PRODUCT_ID);
-    USB.productName("Korean USB Keyboard");
-    USB.manufacturerName("Samsung Electronics");
-    USB.serialNumber("KR2024KB001");
-    
-    // USBHID 초기화
-    if (!USBHID::begin()) {
-        return false;
-    }
-    
-    // Custom HID Descriptor 설정
-    static HIDSubDescriptor node(korean_hid_report_desc, KOREAN_HID_DESC_SIZE);
-    if (!HID().AppendDescriptor(&node)) {
+    // USB 시작
+    if (!TinyUSBDevice.begin(0)) {
         return false;
     }
     
@@ -69,8 +66,6 @@ bool KoreanUSBHID::begin(void) {
 // 종료
 void KoreanUSBHID::end(void) {
     releaseAll();
-    USBHID::end();
-    USB.end();
     _state.is_initialized = false;
 }
 
@@ -82,36 +77,13 @@ bool KoreanUSBHID::toggleLanguage(void) {
     
     bool success = false;
     
-    switch (_state.toggle_method) {
-        case HANGUL_TOGGLE_RIGHT_ALT:
-            // Right Alt 전송
-            _keyboard_report.modifiers = 0x40;
-            success = _send_report(HID_REPORT_ID_KEYBOARD, &_keyboard_report, sizeof(_keyboard_report));
-            delay(50);
-            _keyboard_report.modifiers = 0;
-            success &= _send_report(HID_REPORT_ID_KEYBOARD, &_keyboard_report, sizeof(_keyboard_report));
-            break;
-            
-        case HANGUL_TOGGLE_ALT_SHIFT:
-            success = sendKeyCombo(0x06, 0); // Alt + Shift
-            break;
-            
-        case HANGUL_TOGGLE_CTRL_SPACE:
-            success = sendKeyCombo(0x01, 0x2C); // Ctrl + Space
-            break;
-            
-        case HANGUL_TOGGLE_HANGUL_KEY:
-            success = sendKey(HID_KEY_HANGUL);
-            break;
-            
-        case HANGUL_TOGGLE_LANG1_KEY:
-            success = sendKey(HID_KEY_LANG1);
-            break;
-            
-        default:
-            success = sendKey(HID_KEY_HANGUL);
-            break;
-    }
+    // Right Alt 방식으로 한영 전환
+    _keyboard_report.modifiers = 0x40; // Right Alt
+    success = _send_report(HID_REPORT_ID_KEYBOARD, &_keyboard_report, sizeof(_keyboard_report));
+    delay(50);
+    
+    _keyboard_report.modifiers = 0;
+    success &= _send_report(HID_REPORT_ID_KEYBOARD, &_keyboard_report, sizeof(_keyboard_report));
     
     if (success) {
         _state.current_mode = (_state.current_mode == LANG_MODE_KOREAN) ? LANG_MODE_ENGLISH : LANG_MODE_KOREAN;
@@ -236,7 +208,7 @@ void KoreanUSBHID::printStats(void) {
 
 // 연결 상태 확인
 bool KoreanUSBHID::isConnected(void) const {
-    return USB.isConnected();
+    return TinyUSBDevice.mounted();
 }
 
 // 초기화 상태 확인

@@ -1,33 +1,25 @@
 /**
- * GHOSTYPE Korean HID - PlatformIO Version
- * 
- * ESP32-S3 기반 한국어 키보드 USB HID 구현
- * Windows에서 Samsung Korean USB Keyboard로 인식
- * 
- * 필수 라이브러리:
- * - Adafruit TinyUSB Library (v2.2.6+)
- * - NimBLE-Arduino (v1.4.0+)
- * - ArduinoJson (v6.21.3+)
- * 
- * 보드 설정:
- * - Board: ESP32S3 Dev Module
- * - USB Mode: USB-OTG (TinyUSB)
- * - USB CDC On Boot: Enabled
- * - PSRAM: OPI PSRAM
+ * GHOSTYPE Korean HID - PlatformIO Version (Simplified)
  */
 
 #include <Arduino.h>
-#include <USB.h>
-#include <USBHID.h>
 #include "Adafruit_TinyUSB.h"
-
-// 설정 파일 포함
 #include "config.h"
 #include "usb_descriptors.h"
 
 // 전역 변수
 KoreanUSBHID koreanKeyboard;
 bool system_initialized = false;
+
+// 함수 선언
+void runInitialTest();
+void testBasicKeys();
+void testHangulToggle();
+void testConsumerKeys();
+void showSystemStatus();
+void sendSimpleText(const char* text);
+void sendEnter();
+uint8_t charToKeycode(char c);
 
 void setup() {
     Serial.begin(115200);

@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 #include <Arduino.h>
-#include <USB.h>
-#include <USBHID.h>
 #include "Adafruit_TinyUSB.h"
 #include "config.h"
 
@@ -80,12 +78,12 @@ static const uint8_t korean_hid_report_desc[] = {
 
 #define KOREAN_HID_DESC_SIZE sizeof(korean_hid_report_desc)
 
-// HID Report 구조체
+// HID Report 구조체 (TinyUSB와 충돌 방지)
 typedef struct {
     uint8_t modifiers;
     uint8_t reserved;
     uint8_t keys[6];
-} __attribute__((packed)) hid_keyboard_report_t;
+} __attribute__((packed)) korean_hid_keyboard_report_t;
 
 typedef struct {
     uint16_t usage_code;
@@ -102,11 +100,12 @@ typedef struct {
 } keyboard_state_t;
 
 // 한국어 키보드 클래스
-class KoreanUSBHID : public USBHID {
+class KoreanUSBHID {
 private:
     keyboard_state_t _state;
-    hid_keyboard_report_t _keyboard_report;
+    korean_hid_keyboard_report_t _keyboard_report;
     hid_consumer_report_t _consumer_report;
+    Adafruit_USBD_HID _usb_hid;
     
     void _init_state(void);
     void _reset_reports(void);
