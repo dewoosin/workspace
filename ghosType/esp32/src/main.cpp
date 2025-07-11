@@ -40,8 +40,9 @@ bool isTyping = false;
 unsigned long lastTypeTime = 0;
 int globalTypingSpeed = 10; // 웹 기본값과 동일 (selected option)
 
-// 언어 상태 관리
+// 언어 상태 관리 - 항상 영문 상태로 시작한다고 가정
 bool isKoreanMode = false; // 현재 입력 언어 모드 (false = English, true = Korean)
+bool isInitialized = false; // 초기화 상태 확인용
 
 // 한글 키 코드 정의 (HID 키코드)
 #ifndef KEY_HANGUL
@@ -61,8 +62,15 @@ bool isKoreanMode = false; // 현재 입력 언어 모드 (false = English, true
     #define DEBUG_PRINTLN(x)
 #endif
 
-// 언어 전환 함수
+// 언어 전환 함수 - 초기 상태 강제 설정
 void toggleToKoreanMode() {
+    // 첫 번째 명령이면 항상 영문 상태에서 시작한다고 가정
+    if (!isInitialized) {
+        DEBUG_PRINTLN("초기화: 영문 모드로 강제 설정");
+        isKoreanMode = false;
+        isInitialized = true;
+    }
+    
     if (!isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 영문 → 한글");
         
@@ -71,10 +79,20 @@ void toggleToKoreanMode() {
         delay(800); // IME 전환 완료 대기 (더 긴 딜레이)
         
         isKoreanMode = true;
+    } else {
+        DEBUG_PRINTLN("이미 한글 모드입니다.");
     }
 }
 
 void toggleToEnglishMode() {
+    // 첫 번째 명령이면 항상 영문 상태에서 시작한다고 가정
+    if (!isInitialized) {
+        DEBUG_PRINTLN("초기화: 영문 모드로 강제 설정");
+        isKoreanMode = false;
+        isInitialized = true;
+        return; // 이미 영문 모드이므로 전환 불필요
+    }
+    
     if (isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 한글 → 영문");
         
@@ -83,6 +101,8 @@ void toggleToEnglishMode() {
         delay(800); // IME 전환 완료 대기 (더 긴 딜레이)
         
         isKoreanMode = false;
+    } else {
+        DEBUG_PRINTLN("이미 영문 모드입니다.");
     }
 }
 
@@ -143,8 +163,15 @@ bool processProtocolCommand(const String& line) {
             } else {
                 // 일반 문자 타이핑 (엔터키는 무시, #CMD:ENTER로 처리됨)
                 if (c != '\n' && c != '\r') {
-                    keyboard.write(c);
-                    delay(delay_ms);
+                    // 스페이스바 특별 처리 - 더 긴 딜레이
+                    if (c == ' ') {
+                        DEBUG_PRINTLN("스페이스바 입력");
+                        keyboard.write(c);
+                        delay(delay_ms + 50); // 스페이스바는 더 긴 딜레이
+                    } else {
+                        keyboard.write(c);
+                        delay(delay_ms);
+                    }
                 }
             }
         }
