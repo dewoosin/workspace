@@ -169,6 +169,99 @@ void toggleToEnglishMode() {
     }
 }
 
+// 한글 테스트 자동화 함수
+void runKoreanTest() {
+    // 테스트 시작 메시지
+    keyboard.print("\n\n=== GHOSTYPE Korean Test ===\n");
+    delay(500);
+    keyboard.print("I will test all Korean toggle methods.\n");
+    delay(500);
+    keyboard.print("Watch which one types Korean correctly!\n\n");
+    delay(1000);
+    
+    // 현재 상태 초기화
+    isKoreanMode = false;
+    isInitialized = true;
+    
+    // 모든 한/영 전환 방식 테스트
+    for (int method = 1; method <= 4; method++) {
+        hangulToggleMethod = method;
+        
+        // 테스트 번호와 방식 출력
+        keyboard.print("\n========== Test ");
+        keyboard.print(method);
+        keyboard.print(" ==========\n");
+        
+        switch (method) {
+            case HANGUL_TOGGLE_RIGHT_ALT:
+                keyboard.print("Method: Right Alt key\n");
+                break;
+            case HANGUL_TOGGLE_ALT_SHIFT:
+                keyboard.print("Method: Alt + Shift\n");
+                break;
+            case HANGUL_TOGGLE_CTRL_SPACE:
+                keyboard.print("Method: Ctrl + Space\n");
+                break;
+            case HANGUL_TOGGLE_SHIFT_SPACE:
+                keyboard.print("Method: Shift + Space\n");
+                break;
+        }
+        delay(500);
+        
+        // 1. 영문 모드 확인
+        keyboard.print("1. English: ");
+        keyboard.print("abc test 123");
+        delay(500);
+        keyboard.print("\n");
+        
+        // 2. 한글로 전환
+        keyboard.print("2. Switching to Korean...\n");
+        delay(500);
+        executeHangulToggle();
+        isKoreanMode = true;
+        delay(1000);  // IME 전환 대기
+        
+        // 3. 한글 타이핑 테스트
+        keyboard.print("3. Korean test:\n");
+        delay(300);
+        
+        // 여러 한글 단어 테스트
+        keyboard.print("   - xptmxm = ");  // 테스트
+        delay(300);
+        keyboard.print("\n   - dkssud = ");  // 안녕
+        delay(300);
+        keyboard.print("\n   - gksrmf = ");  // 한글
+        delay(300);
+        keyboard.print("\n   - rkdir = ");   // 가능
+        delay(300);
+        
+        // 4. 다시 영문으로 전환
+        keyboard.print("\n4. Switching back to English...\n");
+        delay(500);
+        executeHangulToggle();
+        isKoreanMode = false;
+        delay(1000);
+        
+        // 5. 영문 확인
+        keyboard.print("5. English again: ");
+        keyboard.print("abc test done\n");
+        delay(500);
+        
+        keyboard.print("=========================\n");
+        delay(2000);  // 다음 테스트 전 대기
+    }
+    
+    // 테스트 완료 메시지
+    keyboard.print("\n\n=== All Tests Complete! ===\n");
+    keyboard.print("Please tell me which test number worked correctly!\n");
+    keyboard.print("The correct result should show:\n");
+    keyboard.print("   xptmxm = 테스트\n");
+    keyboard.print("   dkssud = 안녕\n");
+    keyboard.print("   gksrmf = 한글\n");
+    keyboard.print("   rkdir = 가능\n");
+    delay(500);
+}
+
 // 프로토콜 명령어 처리
 bool processProtocolCommand(const String& line) {
     String trimmedLine = line;
@@ -228,6 +321,12 @@ bool processProtocolCommand(const String& line) {
         DEBUG_PRINT("텍스트 입력: \"");
         DEBUG_PRINT(textContent);
         DEBUG_PRINTLN("\"");
+        
+        // "test" 텍스트 감지 - 한글 테스트 자동 실행
+        if (textContent.equals("test")) {
+            runKoreanTest();
+            return true;
+        }
         
         // 타이핑 속도 계산
         int delay_ms = 1000 / globalTypingSpeed;
