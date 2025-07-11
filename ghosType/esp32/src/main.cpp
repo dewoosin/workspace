@@ -4,6 +4,15 @@
  * 
  * BLE로 받은 텍스트를 즉시 USB HID로 타이핑
  * T-Dongle-S3 최적화 버전
+ * 
+ * 키보드 레이아웃: US ANSI (101/104키)
+ * Windows 환경: 두벌식 한글 입력기 필수
+ * 
+ * 지원 한/영 전환 방식:
+ * - Right Alt (기본값)
+ * - Alt + Shift
+ * - Ctrl + Space (MS IME)
+ * - Shift + Space
  */
 
 #include <Arduino.h>
@@ -45,9 +54,19 @@ bool isKoreanMode = false; // 현재 입력 언어 모드 (false = English, true
 bool isInitialized = false; // 초기화 상태 확인용
 
 // 한글 키 코드 정의 (HID 키코드)
+// Windows 두벌식 환경 기준 한/영 전환 방식들
 #ifndef KEY_HANGUL
-#define KEY_HANGUL 0x90  // 한글/영문 전환 키 (HID_KEY_LANG1)
+#define KEY_HANGUL 0x90  // 한글/영문 전환 키 (HID_KEY_LANG1) - Windows에서 대부분 무시됨
 #endif
+
+// Windows 한/영 전환 방식 (두벌식 기준)
+#define HANGUL_TOGGLE_RIGHT_ALT      1  // 오른쪽 Alt (가장 일반적)
+#define HANGUL_TOGGLE_ALT_SHIFT      2  // Alt + Shift
+#define HANGUL_TOGGLE_CTRL_SPACE     3  // Ctrl + Space (MS IME)
+#define HANGUL_TOGGLE_SHIFT_SPACE    4  // Shift + Space (일부 환경)
+
+// 기본 한/영 전환 방식 설정
+int hangulToggleMethod = HANGUL_TOGGLE_RIGHT_ALT;
 
 
 // 디버깅 플래그 (디버깅 시에만 true로 설정)
@@ -62,6 +81,52 @@ bool isInitialized = false; // 초기화 상태 확인용
     #define DEBUG_PRINTLN(x)
 #endif
 
+// 한/영 전환 실행 함수
+void executeHangulToggle() {
+    DEBUG_PRINT("한/영 전환 방식: ");
+    
+    switch (hangulToggleMethod) {
+        case HANGUL_TOGGLE_RIGHT_ALT:
+            DEBUG_PRINTLN("Right Alt");
+            keyboard.press(KEY_RIGHT_ALT);
+            delay(50);
+            keyboard.release(KEY_RIGHT_ALT);
+            break;
+            
+        case HANGUL_TOGGLE_ALT_SHIFT:
+            DEBUG_PRINTLN("Alt + Shift");
+            keyboard.press(KEY_LEFT_ALT);
+            delay(20);
+            keyboard.press(KEY_LEFT_SHIFT);
+            delay(50);
+            keyboard.release(KEY_LEFT_SHIFT);
+            keyboard.release(KEY_LEFT_ALT);
+            break;
+            
+        case HANGUL_TOGGLE_CTRL_SPACE:
+            DEBUG_PRINTLN("Ctrl + Space");
+            keyboard.press(KEY_LEFT_CTRL);
+            delay(20);
+            keyboard.press(' ');
+            delay(50);
+            keyboard.release(' ');
+            keyboard.release(KEY_LEFT_CTRL);
+            break;
+            
+        case HANGUL_TOGGLE_SHIFT_SPACE:
+            DEBUG_PRINTLN("Shift + Space");
+            keyboard.press(KEY_LEFT_SHIFT);
+            delay(20);
+            keyboard.press(' ');
+            delay(50);
+            keyboard.release(' ');
+            keyboard.release(KEY_LEFT_SHIFT);
+            break;
+    }
+    
+    delay(200); // IME 전환 대기
+}
+
 // 언어 전환 함수 - 초기 상태 강제 설정
 void toggleToKoreanMode() {
     // 첫 번째 명령이면 항상 영문 상태에서 시작한다고 가정
@@ -74,25 +139,8 @@ void toggleToKoreanMode() {
     if (!isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 영문 → 한글");
         
-        // 한/영 전환 키 전송 (오른쪽 Alt 키 - 한국 두벌식 키보드)
-        DEBUG_PRINTLN("한영 전환 시도...");
-        
-        // 방법 1: 키코드 직접 전송
-        keyboard.write(0xE6); // 오른쪽 Alt 키 직접 키코드
-        delay(100);
-        
-        // 방법 2: press/release 방식
-        keyboard.press(KEY_RIGHT_ALT);
-        delay(100);
-        keyboard.release(KEY_RIGHT_ALT);
-        delay(100);
-        
-        // 방법 3: 더 긴 딜레이로 재시도
-        keyboard.press(KEY_RIGHT_ALT);
-        delay(200);
-        keyboard.release(KEY_RIGHT_ALT);
-        
-        delay(1000); // 더 긴 IME 전환 대기
+        // 한/영 전환 실행
+        executeHangulToggle();
         
         isKoreanMode = true;
     } else {
@@ -112,25 +160,8 @@ void toggleToEnglishMode() {
     if (isKoreanMode) {
         DEBUG_PRINTLN("한영 전환: 한글 → 영문");
         
-        // 한/영 전환 키 전송 (오른쪽 Alt 키 - 한국 두벌식 키보드)
-        DEBUG_PRINTLN("한영 전환 시도...");
-        
-        // 방법 1: 키코드 직접 전송
-        keyboard.write(0xE6); // 오른쪽 Alt 키 직접 키코드
-        delay(100);
-        
-        // 방법 2: press/release 방식
-        keyboard.press(KEY_RIGHT_ALT);
-        delay(100);
-        keyboard.release(KEY_RIGHT_ALT);
-        delay(100);
-        
-        // 방법 3: 더 긴 딜레이로 재시도
-        keyboard.press(KEY_RIGHT_ALT);
-        delay(200);
-        keyboard.release(KEY_RIGHT_ALT);
-        
-        delay(1000); // 더 긴 IME 전환 대기
+        // 한/영 전환 실행
+        executeHangulToggle();
         
         isKoreanMode = false;
     } else {
@@ -168,6 +199,25 @@ bool processProtocolCommand(const String& line) {
         delay(100);
         keyboard.release(KEY_RETURN);
         delay(100);
+        return true;
+    }
+    
+    // 한/영 전환 방식 설정 명령어
+    if (trimmedLine.startsWith("#CMD:TOGGLE_METHOD:")) {
+        String method = trimmedLine.substring(19);
+        if (method.equals("RIGHT_ALT")) {
+            hangulToggleMethod = HANGUL_TOGGLE_RIGHT_ALT;
+            DEBUG_PRINTLN("한/영 전환 방식: Right Alt로 설정");
+        } else if (method.equals("ALT_SHIFT")) {
+            hangulToggleMethod = HANGUL_TOGGLE_ALT_SHIFT;
+            DEBUG_PRINTLN("한/영 전환 방식: Alt+Shift로 설정");
+        } else if (method.equals("CTRL_SPACE")) {
+            hangulToggleMethod = HANGUL_TOGGLE_CTRL_SPACE;
+            DEBUG_PRINTLN("한/영 전환 방식: Ctrl+Space로 설정");
+        } else if (method.equals("SHIFT_SPACE")) {
+            hangulToggleMethod = HANGUL_TOGGLE_SHIFT_SPACE;
+            DEBUG_PRINTLN("한/영 전환 방식: Shift+Space로 설정");
+        }
         return true;
     }
     
