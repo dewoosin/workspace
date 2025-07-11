@@ -40,45 +40,107 @@ void loop() {
     static int counter = 0;
     
     counter++;
-    Serial.printf("🔄 키보드 테스트 %d\n", counter);
+    Serial.printf("🔄 테스트 %d: ", counter);
     
-    // 'A' 키 전송
-    Serial.println("📝 'A' 키 전송");
-    keyboard.write('A');
-    delay(500);
-    
-    // 엔터 키 전송
-    Serial.println("📝 엔터 키 전송");
-    keyboard.write(KEY_RETURN);
-    delay(1000);
-    
-    // 3번째마다 한영 전환 시도 (여러 방법)
-    if (counter % 3 == 0) {
-        Serial.println("📝 한영 전환 시도:");
-        
-        // 방법 1: Alt + Shift
-        Serial.println("  - Alt + Shift");
-        keyboard.press(KEY_LEFT_ALT);
-        keyboard.press(KEY_LEFT_SHIFT);
-        delay(100);
-        keyboard.releaseAll();
-        delay(300);
-        
-        // 방법 2: Ctrl + Space
-        Serial.println("  - Ctrl + Space");
-        keyboard.press(KEY_LEFT_CTRL);
-        keyboard.press(' ');
-        delay(100);
-        keyboard.releaseAll();
-        delay(300);
-        
-        // 방법 3: 한글 키 (0xF2)
-        Serial.println("  - 한글 키 직접");
-        keyboard.press(0xF2);
-        delay(100);
-        keyboard.releaseAll();
-        delay(500);
+    // 12가지 한영 전환 방법 순환 테스트
+    switch (counter % 12) {
+        case 1:
+            Serial.println("Alt + Shift (좌측)");
+            keyboard.press(KEY_LEFT_ALT);
+            keyboard.press(KEY_LEFT_SHIFT);
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 2:
+            Serial.println("Alt + Shift (우측)");
+            keyboard.press(KEY_RIGHT_ALT);
+            keyboard.press(KEY_RIGHT_SHIFT);
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 3:
+            Serial.println("Ctrl + Space");
+            keyboard.press(KEY_LEFT_CTRL);
+            keyboard.press(' ');
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 4:
+            Serial.println("Shift + Space");
+            keyboard.press(KEY_LEFT_SHIFT);
+            keyboard.press(' ');
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 5:
+            Serial.println("한글 키 (0xF2)");
+            keyboard.press(0xF2);
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 6:
+            Serial.println("Right Alt 단독");
+            keyboard.press(KEY_RIGHT_ALT);
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 7:
+            Serial.println("Left Alt 단독");
+            keyboard.press(KEY_LEFT_ALT);
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 8:
+            Serial.println("Win + Space");
+            keyboard.press(KEY_LEFT_GUI);
+            keyboard.press(' ');
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 9:
+            Serial.println("F9 키");
+            keyboard.press(KEY_F9);
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 10:
+            Serial.println("Menu 키");
+            keyboard.press(KEY_MENU);
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 11:
+            Serial.println("한자 키 (0xF1)");
+            keyboard.press(0xF1);
+            delay(100);
+            keyboard.releaseAll();
+            break;
+            
+        case 0:
+            Serial.println("Ctrl + Shift");
+            keyboard.press(KEY_LEFT_CTRL);
+            keyboard.press(KEY_LEFT_SHIFT);
+            delay(100);
+            keyboard.releaseAll();
+            break;
     }
     
-    delay(3000);  // 3초 대기
+    delay(300);
+    
+    // 테스트 문자 전송
+    keyboard.write('A');
+    delay(200);
+    keyboard.write(KEY_RETURN);
+    
+    delay(1000);  // 1초 대기
 }
