@@ -75,10 +75,24 @@ void toggleToKoreanMode() {
         DEBUG_PRINTLN("한영 전환: 영문 → 한글");
         
         // 한/영 전환 키 전송 (오른쪽 Alt 키 - 한국 두벌식 키보드)
+        DEBUG_PRINTLN("한영 전환 시도...");
+        
+        // 방법 1: 키코드 직접 전송
+        keyboard.write(0xE6); // 오른쪽 Alt 키 직접 키코드
+        delay(100);
+        
+        // 방법 2: press/release 방식
         keyboard.press(KEY_RIGHT_ALT);
-        delay(50);
-        keyboard.releaseAll();
-        delay(800); // IME 전환 완료 대기
+        delay(100);
+        keyboard.release(KEY_RIGHT_ALT);
+        delay(100);
+        
+        // 방법 3: 더 긴 딜레이로 재시도
+        keyboard.press(KEY_RIGHT_ALT);
+        delay(200);
+        keyboard.release(KEY_RIGHT_ALT);
+        
+        delay(1000); // 더 긴 IME 전환 대기
         
         isKoreanMode = true;
     } else {
@@ -99,10 +113,24 @@ void toggleToEnglishMode() {
         DEBUG_PRINTLN("한영 전환: 한글 → 영문");
         
         // 한/영 전환 키 전송 (오른쪽 Alt 키 - 한국 두벌식 키보드)
+        DEBUG_PRINTLN("한영 전환 시도...");
+        
+        // 방법 1: 키코드 직접 전송
+        keyboard.write(0xE6); // 오른쪽 Alt 키 직접 키코드
+        delay(100);
+        
+        // 방법 2: press/release 방식
         keyboard.press(KEY_RIGHT_ALT);
-        delay(50);
-        keyboard.releaseAll();
-        delay(800); // IME 전환 완료 대기
+        delay(100);
+        keyboard.release(KEY_RIGHT_ALT);
+        delay(100);
+        
+        // 방법 3: 더 긴 딜레이로 재시도
+        keyboard.press(KEY_RIGHT_ALT);
+        delay(200);
+        keyboard.release(KEY_RIGHT_ALT);
+        
+        delay(1000); // 더 긴 IME 전환 대기
         
         isKoreanMode = false;
     } else {
