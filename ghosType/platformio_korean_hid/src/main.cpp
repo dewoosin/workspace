@@ -52,10 +52,29 @@ void loop() {
     keyboard.write(KEY_RETURN);
     delay(1000);
     
-    // 3번째마다 한영 전환 시도
+    // 3번째마다 한영 전환 시도 (여러 방법)
     if (counter % 3 == 0) {
-        Serial.println("📝 한영 전환 키 전송 (Right Alt)");
-        keyboard.press(KEY_RIGHT_ALT);
+        Serial.println("📝 한영 전환 시도:");
+        
+        // 방법 1: Alt + Shift
+        Serial.println("  - Alt + Shift");
+        keyboard.press(KEY_LEFT_ALT);
+        keyboard.press(KEY_LEFT_SHIFT);
+        delay(100);
+        keyboard.releaseAll();
+        delay(300);
+        
+        // 방법 2: Ctrl + Space
+        Serial.println("  - Ctrl + Space");
+        keyboard.press(KEY_LEFT_CTRL);
+        keyboard.press(' ');
+        delay(100);
+        keyboard.releaseAll();
+        delay(300);
+        
+        // 방법 3: 한글 키 (0xF2)
+        Serial.println("  - 한글 키 직접");
+        keyboard.press(0xF2);
         delay(100);
         keyboard.releaseAll();
         delay(500);
