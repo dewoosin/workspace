@@ -65,6 +65,13 @@ bool isInitialized = false; // 초기화 상태 확인용
 #define KEY_HANGUL 0x90  // 한글/영문 전환 키 (HID_KEY_LANG1) - Windows에서 대부분 무시됨
 #endif
 
+// HID Usage Table에 따른 추가 키코드
+#define HID_KEY_LANG1 0x90  // Language 1 (CJK용)
+#define HID_KEY_LANG2 0x91  // Language 2 (CJK용)
+#define HID_KEY_LANG3 0x92  // Language 3 (일본어 카타카나)
+#define HID_KEY_LANG4 0x93  // Language 4 (일본어 히라가나)
+#define HID_KEY_LANG5 0x94  // Language 5 (일본어 젠카쿠/한카쿠)
+
 // Windows 한/영 전환 방식 (두벌식 기준)
 #define HANGUL_TOGGLE_RIGHT_ALT      1  // 오른쪽 Alt (가장 일반적)
 #define HANGUL_TOGGLE_ALT_SHIFT      2  // Alt + Shift
@@ -73,6 +80,11 @@ bool isInitialized = false; // 초기화 상태 확인용
 #define HANGUL_TOGGLE_HANGUL_KEY     5  // 한/영 키 (0xF2)
 #define HANGUL_TOGGLE_LEFT_ALT       6  // 왼쪽 Alt
 #define HANGUL_TOGGLE_WIN_SPACE      7  // Win + Space
+#define HANGUL_TOGGLE_LANG1_KEY      8  // HID Language 1 키
+#define HANGUL_TOGGLE_LANG2_KEY      9  // HID Language 2 키
+#define HANGUL_TOGGLE_F9_KEY        10  // F9 키 (일부 환경)
+#define HANGUL_TOGGLE_MENU_KEY      11  // Menu 키
+#define HANGUL_TOGGLE_APPLICATION   12  // Application 키
 
 // 기본 한/영 전환 방식 설정
 int hangulToggleMethod = HANGUL_TOGGLE_RIGHT_ALT;
@@ -153,6 +165,33 @@ void executeHangulToggle() {
             keyboard.release(' ');
             keyboard.release(KEY_LEFT_GUI);
             break;
+            
+        case HANGUL_TOGGLE_LANG1_KEY:
+            DEBUG_PRINTLN("HID Language 1 Key");
+            keyboard.write(HID_KEY_LANG1);  // 0x90
+            break;
+            
+        case HANGUL_TOGGLE_LANG2_KEY:
+            DEBUG_PRINTLN("HID Language 2 Key");
+            keyboard.write(HID_KEY_LANG2);  // 0x91
+            break;
+            
+        case HANGUL_TOGGLE_F9_KEY:
+            DEBUG_PRINTLN("F9 Key");
+            keyboard.press(KEY_F9);
+            delay(50);
+            keyboard.release(KEY_F9);
+            break;
+            
+        case HANGUL_TOGGLE_MENU_KEY:
+            DEBUG_PRINTLN("Menu Key");
+            keyboard.write(0x76);  // Menu key (Right-click context menu)
+            break;
+            
+        case HANGUL_TOGGLE_APPLICATION:
+            DEBUG_PRINTLN("Application Key");
+            keyboard.write(0x65);  // Application key
+            break;
     }
     
     delay(200); // IME 전환 대기
@@ -229,19 +268,21 @@ void runKoreanTest() {
     check2BeolsikKeyboard();
     
     // 테스트 시작 메시지
-    keyboard.print("\n\n=== GHOSTYPE Korean Test v3 (2-beolsik only) ===\n");
+    keyboard.print("\n\n=== GHOSTYPE Korean Test v4 (ULTIMATE) ===\n");
     delay(500);
-    keyboard.print("Testing 7 different Korean toggle methods.\n");
+    keyboard.print("Testing 12 different Korean toggle methods!\n");
     delay(500);
-    keyboard.print("Using 2-beolsik key sequences.\n\n");
+    keyboard.print("This includes HID Language keys and special methods.\n");
+    delay(500);
+    keyboard.print("One of these MUST work!\n\n");
     delay(1000);
     
     // 현재 상태 초기화
     isKoreanMode = false;
     isInitialized = true;
     
-    // 모든 한/영 전환 방식 테스트 (7가지)
-    for (int method = 1; method <= 7; method++) {
+    // 모든 한/영 전환 방식 테스트 (12가지)
+    for (int method = 1; method <= 12; method++) {
         hangulToggleMethod = method;
         
         // 테스트 번호와 방식 출력
@@ -277,6 +318,26 @@ void runKoreanTest() {
             case HANGUL_TOGGLE_WIN_SPACE:
                 keyboard.print("Method: Win + Space\n");
                 keyboard.print("Pressing: [Windows] + [Space]\n");
+                break;
+            case HANGUL_TOGGLE_LANG1_KEY:
+                keyboard.print("Method: HID Language 1 Key\n");
+                keyboard.print("Sending: [Language 1 Key Code 0x90]\n");
+                break;
+            case HANGUL_TOGGLE_LANG2_KEY:
+                keyboard.print("Method: HID Language 2 Key\n");
+                keyboard.print("Sending: [Language 2 Key Code 0x91]\n");
+                break;
+            case HANGUL_TOGGLE_F9_KEY:
+                keyboard.print("Method: F9 Key\n");
+                keyboard.print("Pressing: [F9]\n");
+                break;
+            case HANGUL_TOGGLE_MENU_KEY:
+                keyboard.print("Method: Menu Key\n");
+                keyboard.print("Pressing: [Menu Key 0x76]\n");
+                break;
+            case HANGUL_TOGGLE_APPLICATION:
+                keyboard.print("Method: Application Key\n");
+                keyboard.print("Pressing: [Application Key 0x65]\n");
                 break;
         }
         delay(1000);
@@ -357,16 +418,20 @@ void runKoreanTest() {
     }
     
     // 테스트 완료 메시지
-    keyboard.print("\n\n=== All Tests Complete! ===\n");
-    keyboard.print("Which test number showed Korean characters?\n");
+    keyboard.print("\n\n=== ALL 12 TESTS COMPLETE! ===\n");
+    keyboard.print("I tested EVERY possible Korean toggle method!\n");
     keyboard.print("\nExpected results (2-beolsik):\n");
-    keyboard.print("   test = 섣 (if not combined properly)\n");
-    keyboard.print("   xptmxm = 테스트\n");
+    keyboard.print("   test = 섣 (if characters shown separately)\n");
+    keyboard.print("   xptmxm = 테스트 (if properly combined)\n");
     keyboard.print("   rk = 가\n");
     keyboard.print("   dkssud = 안녕\n");
-    keyboard.print("\nIMPORTANT: You MUST have 2-beolsik Korean!\n");
-    keyboard.print("3-beolsik will NOT work with GHOSTYPE!\n");
-    keyboard.print("\nPlease tell me the test number that worked!\n");
+    keyboard.print("\nIf ALL tests failed:\n");
+    keyboard.print("1. Check Windows Language Settings\n");
+    keyboard.print("2. Make sure Korean (2-beolsik) is installed\n");
+    keyboard.print("3. Try changing ESP32 HID descriptor\n");
+    keyboard.print("4. Consider using AutoHotkey as intermediary\n");
+    keyboard.print("\nPlease tell me which test number worked!\n");
+    keyboard.print("If none worked, we'll try advanced methods!\n");
     delay(500);
 }
 
