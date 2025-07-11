@@ -1,118 +1,62 @@
 /**
- * GHOSTYPE Korean HID - 최소 테스트 버전
+ * GHOSTYPE Korean HID - ESP32 네이티브 USB 버전
  */
 
 #include <Arduino.h>
-#include "Adafruit_TinyUSB.h"
+#include <USB.h>
+#include <USBHIDKeyboard.h>
 
-// HID Report Descriptor
-uint8_t const desc_hid_report[] = {
-    0x05, 0x01,                    // Usage Page (Generic Desktop Ctrls)
-    0x09, 0x06,                    // Usage (Keyboard)
-    0xA1, 0x01,                    // Collection (Application)
-    0x05, 0x07,                    //   Usage Page (Kbrd/Keypad)
-    0x19, 0xE0,                    //   Usage Minimum (0xE0)
-    0x29, 0xE7,                    //   Usage Maximum (0xE7)
-    0x15, 0x00,                    //   Logical Minimum (0)
-    0x25, 0x01,                    //   Logical Maximum (1)
-    0x75, 0x01,                    //   Report Size (1)
-    0x95, 0x08,                    //   Report Count (8)
-    0x81, 0x02,                    //   Input (Data,Var,Abs)
-    0x95, 0x01,                    //   Report Count (1)
-    0x75, 0x08,                    //   Report Size (8)
-    0x81, 0x01,                    //   Input (Const,Array,Abs)
-    0x95, 0x05,                    //   Report Count (5)
-    0x75, 0x01,                    //   Report Size (1)
-    0x05, 0x08,                    //   Usage Page (LEDs)
-    0x19, 0x01,                    //   Usage Minimum (Num Lock)
-    0x29, 0x05,                    //   Usage Maximum (Kana)
-    0x91, 0x02,                    //   Output (Data,Var,Abs)
-    0x95, 0x01,                    //   Report Count (1)
-    0x75, 0x03,                    //   Report Size (3)
-    0x91, 0x01,                    //   Output (Const,Array,Abs)
-    0x95, 0x06,                    //   Report Count (6)
-    0x75, 0x08,                    //   Report Size (8)
-    0x15, 0x00,                    //   Logical Minimum (0)
-    0x25, 0x65,                    //   Logical Maximum (101)
-    0x05, 0x07,                    //   Usage Page (Kbrd/Keypad)
-    0x19, 0x00,                    //   Usage Minimum (0x00)
-    0x29, 0x65,                    //   Usage Maximum (0x65)
-    0x81, 0x00,                    //   Input (Data,Array,Abs)
-    0xC0,                          // End Collection
-};
-
-// HID 객체
-Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report), HID_ITF_PROTOCOL_KEYBOARD, 2, false);
-
-// 키보드 리포트 구조체 (충돌 방지)
-typedef struct {
-    uint8_t modifier;
-    uint8_t reserved;
-    uint8_t keycode[6];
-} korean_keyboard_report_t;
+// 네이티브 USB HID 키보드 객체
+USBHIDKeyboard keyboard;
 
 void setup() {
     Serial.begin(115200);
+    delay(1000);
+    
+    Serial.println("=== ESP32 네이티브 USB HID 테스트 ===");
     
     // USB 설정
-    TinyUSBDevice.setManufacturerDescriptor("Samsung Electronics");
-    TinyUSBDevice.setProductDescriptor("Korean USB Keyboard");
-    TinyUSBDevice.setSerialDescriptor("KR2024KB001");
-    TinyUSBDevice.setID(0x04E8, 0x7021);  // Samsung VID/PID
+    USB.manufacturerName("Samsung Electronics");
+    USB.productName("Korean USB Keyboard");
+    USB.serialNumber("KR2024KB001");
+    USB.VID(0x04E8);  // Samsung VID
+    USB.PID(0x7021);  // Korean Keyboard PID
     
-    // USB HID 시작
-    usb_hid.begin();
+    // USB 시작
+    Serial.println("USB 초기화 중...");
+    USB.begin();
     
-    // USB 장치 시작
-    Serial.println("USB HID 초기화 중...");
+    // 키보드 시작
+    Serial.println("키보드 초기화 중...");
+    keyboard.begin();
     
-    // 연결 대기 (타임아웃 추가)
-    int timeout = 0;
-    while (!TinyUSBDevice.mounted() && timeout < 5000) {
-        delay(1);
-        timeout++;
-    }
-    
-    if (TinyUSBDevice.mounted()) {
-        Serial.println("✅ USB HID 연결 성공!");
-    } else {
-        Serial.println("⚠️ USB HID 연결 실패 - 계속 진행");
-    }
-    
-    delay(1000);
+    Serial.println("✅ 초기화 완료!");
+    Serial.println("5초 후 테스트 시작...");
+    delay(5000);
 }
 
 void loop() {
-    // 단순 테스트: 5초마다 'A' 키 전송
-    static unsigned long lastSend = 0;
     static int counter = 0;
     
-    // 생존 신호
-    if (millis() - lastSend > 1000) {
-        counter++;
-        Serial.printf("⏰ 대기 중... %d초\n", counter);
-        
-        // 5초마다 키 전송 시도
-        if (counter % 5 == 0) {
-            Serial.println("📝 'A' 키 전송 시도...");
-            
-            // 키보드 리포트 생성
-            korean_keyboard_report_t report = {0};
-            report.keycode[0] = 0x04;  // 'A' 키
-            
-            // HID 리포트 전송
-            bool success = usb_hid.sendReport(0, &report, sizeof(report));
-            Serial.printf("키 전송 결과: %s\n", success ? "성공" : "실패");
-            
-            delay(100);
-            
-            // 키 해제
-            memset(&report, 0, sizeof(report));
-            usb_hid.sendReport(0, &report, sizeof(report));
-        }
-        
-        lastSend = millis();
+    counter++;
+    Serial.printf("🔄 테스트 %d: 'A' 키 전송\n", counter);
+    
+    // 'A' 키 전송
+    keyboard.write('A');
+    delay(500);
+    
+    // 엔터 키 전송
+    keyboard.write(KEY_RETURN);
+    delay(500);
+    
+    // 한영 전환 키 전송 (Right Alt)
+    if (counter % 3 == 0) {
+        Serial.println("📝 한영 전환 키 전송");
+        keyboard.press(KEY_RIGHT_ALT);
+        delay(50);
+        keyboard.releaseAll();
+        delay(500);
     }
     
-    delay(100);
+    delay(2000);  // 2초 대기
 }
