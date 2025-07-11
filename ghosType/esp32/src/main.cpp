@@ -5,8 +5,14 @@
  * BLE로 받은 텍스트를 즉시 USB HID로 타이핑
  * T-Dongle-S3 최적화 버전
  * 
+ * === 필수 요구사항 ===
  * 키보드 레이아웃: US ANSI (101/104키)
- * Windows 환경: 두벌식 한글 입력기 필수
+ * Windows 한글: 반드시 두벌식(2-beolsik) 설정
+ * 
+ * === 두벌식 키 매핑 ===
+ * ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ (shift)
+ * ㅁㄴㅇㄹㅎㅗㅓㅏㅣ
+ * ㅋㅌㅊㅍㅠㅜㅡ
  * 
  * 지원 한/영 전환 방식:
  * - Right Alt (기본값)
@@ -64,6 +70,9 @@ bool isInitialized = false; // 초기화 상태 확인용
 #define HANGUL_TOGGLE_ALT_SHIFT      2  // Alt + Shift
 #define HANGUL_TOGGLE_CTRL_SPACE     3  // Ctrl + Space (MS IME)
 #define HANGUL_TOGGLE_SHIFT_SPACE    4  // Shift + Space (일부 환경)
+#define HANGUL_TOGGLE_HANGUL_KEY     5  // 한/영 키 (0xF2)
+#define HANGUL_TOGGLE_LEFT_ALT       6  // 왼쪽 Alt
+#define HANGUL_TOGGLE_WIN_SPACE      7  // Win + Space
 
 // 기본 한/영 전환 방식 설정
 int hangulToggleMethod = HANGUL_TOGGLE_RIGHT_ALT;
@@ -122,6 +131,28 @@ void executeHangulToggle() {
             keyboard.release(' ');
             keyboard.release(KEY_LEFT_SHIFT);
             break;
+            
+        case HANGUL_TOGGLE_HANGUL_KEY:
+            DEBUG_PRINTLN("Hangul Key (0xF2)");
+            keyboard.write(0xF2);  // 한/영 키 직접 전송
+            break;
+            
+        case HANGUL_TOGGLE_LEFT_ALT:
+            DEBUG_PRINTLN("Left Alt");
+            keyboard.press(KEY_LEFT_ALT);
+            delay(50);
+            keyboard.release(KEY_LEFT_ALT);
+            break;
+            
+        case HANGUL_TOGGLE_WIN_SPACE:
+            DEBUG_PRINTLN("Win + Space");
+            keyboard.press(KEY_LEFT_GUI);  // Windows 키
+            delay(20);
+            keyboard.press(' ');
+            delay(50);
+            keyboard.release(' ');
+            keyboard.release(KEY_LEFT_GUI);
+            break;
     }
     
     delay(200); // IME 전환 대기
@@ -169,22 +200,48 @@ void toggleToEnglishMode() {
     }
 }
 
+// 두벌식 키보드 확인 함수
+void check2BeolsikKeyboard() {
+    keyboard.print("\n=== 2-Beolsik (두벌식) Keyboard Check ===\n");
+    delay(500);
+    keyboard.print("GHOSTYPE only works with 2-beolsik Korean layout!\n\n");
+    delay(500);
+    
+    keyboard.print("Testing keyboard mapping:\n");
+    keyboard.print("If you see correct Korean below, your setup is OK.\n\n");
+    delay(1000);
+    
+    // 두벌식 매핑 테스트
+    keyboard.print("r = ㄱ, k = ㅏ -> rk = ");
+    delay(500);
+    keyboard.print("\ns = ㄴ, k = ㅏ -> sk = ");
+    delay(500);
+    keyboard.print("\ne = ㄷ, k = ㅏ -> ek = ");
+    delay(500);
+    keyboard.print("\n\nIf you see 가, 나, 다 above, continue.\n");
+    keyboard.print("If not, change to 2-beolsik in Windows settings!\n\n");
+    delay(2000);
+}
+
 // 한글 테스트 자동화 함수
 void runKoreanTest() {
+    // 두벌식 확인 먼저
+    check2BeolsikKeyboard();
+    
     // 테스트 시작 메시지
-    keyboard.print("\n\n=== GHOSTYPE Korean Test ===\n");
+    keyboard.print("\n\n=== GHOSTYPE Korean Test v3 (2-beolsik only) ===\n");
     delay(500);
-    keyboard.print("I will test all Korean toggle methods.\n");
+    keyboard.print("Testing 7 different Korean toggle methods.\n");
     delay(500);
-    keyboard.print("Watch which one types Korean correctly!\n\n");
+    keyboard.print("Using 2-beolsik key sequences.\n\n");
     delay(1000);
     
     // 현재 상태 초기화
     isKoreanMode = false;
     isInitialized = true;
     
-    // 모든 한/영 전환 방식 테스트
-    for (int method = 1; method <= 4; method++) {
+    // 모든 한/영 전환 방식 테스트 (7가지)
+    for (int method = 1; method <= 7; method++) {
         hangulToggleMethod = method;
         
         // 테스트 번호와 방식 출력
@@ -195,70 +252,121 @@ void runKoreanTest() {
         switch (method) {
             case HANGUL_TOGGLE_RIGHT_ALT:
                 keyboard.print("Method: Right Alt key\n");
+                keyboard.print("Pressing: [Right Alt]\n");
                 break;
             case HANGUL_TOGGLE_ALT_SHIFT:
                 keyboard.print("Method: Alt + Shift\n");
+                keyboard.print("Pressing: [Left Alt] + [Left Shift]\n");
                 break;
             case HANGUL_TOGGLE_CTRL_SPACE:
                 keyboard.print("Method: Ctrl + Space\n");
+                keyboard.print("Pressing: [Left Ctrl] + [Space]\n");
                 break;
             case HANGUL_TOGGLE_SHIFT_SPACE:
                 keyboard.print("Method: Shift + Space\n");
+                keyboard.print("Pressing: [Left Shift] + [Space]\n");
+                break;
+            case HANGUL_TOGGLE_HANGUL_KEY:
+                keyboard.print("Method: Hangul Key (0xF2)\n");
+                keyboard.print("Sending: [Hangul/English key code 0xF2]\n");
+                break;
+            case HANGUL_TOGGLE_LEFT_ALT:
+                keyboard.print("Method: Left Alt key\n");
+                keyboard.print("Pressing: [Left Alt]\n");
+                break;
+            case HANGUL_TOGGLE_WIN_SPACE:
+                keyboard.print("Method: Win + Space\n");
+                keyboard.print("Pressing: [Windows] + [Space]\n");
                 break;
         }
-        delay(500);
+        delay(1000);
         
-        // 1. 영문 모드 확인
-        keyboard.print("1. English: ");
-        keyboard.print("abc test 123");
-        delay(500);
-        keyboard.print("\n");
-        
-        // 2. 한글로 전환
-        keyboard.print("2. Switching to Korean...\n");
+        // 1. 한글로 전환 시도
+        keyboard.print("\n1. Toggling to Korean mode...\n");
         delay(500);
         executeHangulToggle();
         isKoreanMode = true;
-        delay(1000);  // IME 전환 대기
+        delay(1500);  // IME 전환 대기 시간 증가
         
-        // 3. 한글 타이핑 테스트
-        keyboard.print("3. Korean test:\n");
+        // 2. 한글 타이핑 테스트
+        keyboard.print("2. Typing 2-beolsik test:\n");
+        delay(500);
+        
+        // 두벌식 매핑 명시
+        keyboard.print("   [t=ㅅ,e=ㄷ,s=ㄴ,t=ㅅ] test = ");
+        keyboard.write('t');
+        delay(100);
+        keyboard.write('e');
+        delay(100);
+        keyboard.write('s');
+        delay(100);
+        keyboard.write('t');
         delay(300);
         
-        // 여러 한글 단어 테스트
-        keyboard.print("   - xptmxm = ");  // 테스트
-        delay(300);
-        keyboard.print("\n   - dkssud = ");  // 안녕
-        delay(300);
-        keyboard.print("\n   - gksrmf = ");  // 한글
-        delay(300);
-        keyboard.print("\n   - rkdir = ");   // 가능
+        keyboard.print("\n   [x=ㅌ,p=ㅔ,t=ㅅ,m=ㅡ,x=ㅌ,m=ㅡ] xptmxm = ");
+        keyboard.write('x');
+        delay(100);
+        keyboard.write('p');
+        delay(100);
+        keyboard.write('t');
+        delay(100);
+        keyboard.write('m');
+        delay(100);
+        keyboard.write('x');
+        delay(100);
+        keyboard.write('m');
         delay(300);
         
-        // 4. 다시 영문으로 전환
-        keyboard.print("\n4. Switching back to English...\n");
+        // 추가 두벌식 테스트
+        keyboard.print("\n   [r=ㄱ,k=ㅏ] rk = ");
+        keyboard.write('r');
+        delay(100);
+        keyboard.write('k');
+        delay(300);
+        
+        keyboard.print("\n   [d=ㅇ,k=ㅏ,s=ㄴ,s=ㄴ,u=ㅕ,d=ㅇ] dkssud = ");
+        keyboard.write('d');
+        delay(100);
+        keyboard.write('k');
+        delay(100);
+        keyboard.write('s');
+        delay(100);
+        keyboard.write('s');
+        delay(100);
+        keyboard.write('u');
+        delay(100);
+        keyboard.write('d');
+        delay(300);
+        
+        // 3. 다시 영문으로 전환
+        keyboard.print("\n\n3. Toggling back to English...\n");
         delay(500);
         executeHangulToggle();
         isKoreanMode = false;
-        delay(1000);
+        delay(1500);
         
-        // 5. 영문 확인
-        keyboard.print("5. English again: ");
-        keyboard.print("abc test done\n");
+        // 4. 영문 확인
+        keyboard.print("4. English test: ");
+        keyboard.print("abc 123\n");
         delay(500);
         
-        keyboard.print("=========================\n");
+        keyboard.print("------- End of Test ");
+        keyboard.print(method);
+        keyboard.print(" -------\n");
         delay(2000);  // 다음 테스트 전 대기
     }
     
     // 테스트 완료 메시지
     keyboard.print("\n\n=== All Tests Complete! ===\n");
-    keyboard.print("Please tell me which test number worked correctly!\n");
-    keyboard.print("The correct result should show:\n");
+    keyboard.print("Which test number showed Korean characters?\n");
+    keyboard.print("\nExpected results (2-beolsik):\n");
+    keyboard.print("   test = 섣 (if not combined properly)\n");
     keyboard.print("   xptmxm = 테스트\n");
+    keyboard.print("   rk = 가\n");
     keyboard.print("   dkssud = 안녕\n");
-    keyboard.print("   gksrmf = 한글\n");
-    keyboard.print("   rkdir = 가능\n");
+    keyboard.print("\nIMPORTANT: You MUST have 2-beolsik Korean!\n");
+    keyboard.print("3-beolsik will NOT work with GHOSTYPE!\n");
+    keyboard.print("\nPlease tell me the test number that worked!\n");
     delay(500);
 }
 
